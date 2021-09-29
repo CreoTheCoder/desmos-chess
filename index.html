@@ -22,7 +22,7 @@
 </head>
 <body>
     <div id="inline" style="display: flex; align-items: flex-start">
-        <div id="calculator" style="width: 1116px; height: 558px; position: relative">
+        <div id="calculator" style="width: 1116px; height: 558px; position: relative" ontouchstart="getPieces()" ontouchend="getPieces(points)">
             <div id="game_over"
                 style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); font-size: 40px; color: red; font-weight: bold">
                 youtu.be/dQw4w9WgXcQ
@@ -62,8 +62,6 @@
             <hr>
             <button onclick="downloadGame()">Download PGN</button>
             <button onclick="copyPGN()">Copy PGN</button>
-            
-            
             <hr>
         </div>
     </div>
@@ -72,13 +70,12 @@
         <p id="status" style="color: #ff0000; font-size: 30px"></p>
         <p id="thinking" style="font-size: 30px"></p>
     </div>
-    <script>if(window.innerWidth <= 700){document.getElementById('inline').style.display = 'inline'}</script>
     <script>
         const jsChessEngine = module.exports;
         const chess = new Chess();
         var multiplayer = false;
         var level = 2;
-        var points;
+        window.points;
         var numQueens = { 'w': 2, 'b': 2 };
         function resetGame() {
             chess.reset();
@@ -337,6 +334,17 @@
             bottom: -18,
             top: 18
         });
+        if(window.innerWidth <= 700){
+            document.getElementById('inline').style.display = 'inline';
+            elt.style.width = '400px';
+            elt.style.height = '400px';
+            calculator.setMathBounds({
+                left: -18,
+                right: 22,
+                bottom: -18,
+                top: 18
+            });
+        }
         var letters = [];
         for (i = 1; i < 100; i++) {
             letters.push('n_{' + i.toString() + '}')
