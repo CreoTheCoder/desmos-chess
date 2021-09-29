@@ -1,23 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Desmos Chess</title>
     <script src="https://www.desmos.com/api/v1.6/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js" integrity="sha384-s3XgLpvmHyscVpijnseAmye819Ee3yaGa8NxstkJVyA6nuDFjt59u1QvuEl/mecz" crossorigin="anonymous"></script>
-    <script>window.module={};window.exports={};module.exports={}</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"
+        integrity="sha384-s3XgLpvmHyscVpijnseAmye819Ee3yaGa8NxstkJVyA6nuDFjt59u1QvuEl/mecz"
+        crossorigin="anonymous"></script>
+    <script>window.module = {}; window.exports = {}; module.exports = {}</script>
     <script src="https://unpkg.com/js-chess-engine@0.11.3/dist/js-chess-engine.js"></script>
     <style>
         body {
             font-family: 'Verdana', 'Trebuchet MS', sans-serif;
         }
+
+        form * {
+            display: block;
+            margin: 10px;
+        }
     </style>
 </head>
+
 <body>
+    
     <div style="display: flex; align-items: flex-start">
         <div id="calculator" style="width: 1116px; height: 558px; position: relative">
-            <div id="game_over" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); font-size: 40px; color: red; font-weight: bold">
+            <div id="game_over"
+                style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); font-size: 40px; color: red; font-weight: bold">
                 youtu.be/dQw4w9WgXcQ
             </div>
         </div>
@@ -26,12 +37,12 @@
             <hr>
             <label>
                 <input type="radio" name="multiplayer" onclick="multiplayer=true">
-                    Player vs. Player
+                Player vs. Player
             </label>
             <br>
             <label>
                 <input type="radio" name="multiplayer" onclick="multiplayer=false" checked>
-                    Player vs. Computer
+                Player vs. Computer
             </label>
             <hr>
             <p>Computer level:</p>
@@ -53,6 +64,11 @@
             <hr>
             <button onclick="resetGame()">Reset Game</button>
             <hr>
+            <button onclick="downloadGame()">Download PGN</button>
+            <button onclick="copyPGN()">Copy PGN</button>
+            
+            
+            <hr>
         </div>
     </div>
     <div>
@@ -60,33 +76,54 @@
         <p id="status" style="color: #ff0000; font-size: 30px"></p>
         <p id="thinking" style="font-size: 30px"></p>
     </div>
+
+
     <script>
         const jsChessEngine = module.exports;
         const chess = new Chess();
         var multiplayer = false;
         var level = 2;
         var points;
-        var numQueens = {'w': 2, 'b': 2};
+        var numQueens = { 'w': 2, 'b': 2 };
         function resetGame() {
             chess.reset();
             initGame();
         }
-        function getCoordFromXY (X, Y) {
+        function downloadGame() {
+            let text = chess.pgn({ max_width: 5, newline_char: '\n' })
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', "game.pgn");
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+            document.body.removeChild(element);
+
+        }
+
+        function copyPGN() {
+            let text = chess.pgn()
+            window.prompt("Copy to clipboard: ", text);
+        }
+
+        function getCoordFromXY(X, Y) {
             let letters = 'abcdefgh';
             return letters[Math.floor((16 + X) / 4)] + (Math.floor((16 + Y) / 4) + 1).toString();
         }
-        function getXYFromCoord (coord) {
+        function getXYFromCoord(coord) {
             coord.split('');
             let letters = 'abcdefgh';
-            return [letters.indexOf(coord[0])+1, Number(coord[1])];
+            return [letters.indexOf(coord[0]) + 1, Number(coord[1])];
         }
-        function getPieces (previous) {
+        function getPieces(previous) {
             points = [];
             var expressions = calculator.getExpressions()
             for (var i in expressions) {
                 if (expressions[i]['id'].endsWith('.x')) {
                     let x = expressions[i]['latex'];
-                    let y = expressions[Number(i)+1]['latex'];
+                    let y = expressions[Number(i) + 1]['latex'];
                     points.push([expressions[i]['id'].slice(0, 3), getCoordFromXY(Number(x.split('=')[1]), Number(y.split('=')[1]))]);
                 }
             }
@@ -97,25 +134,25 @@
                 try {
                     movePiece(oldPoint[1], newPoint[1], oldPoint[0]);
                 }
-                catch {}
+                catch { }
             }
         }
-        function movePiece (oldPoint, newPoint, pieceId) {
+        function movePiece(oldPoint, newPoint, pieceId) {
             expressions = calculator.getExpressions();
             var moved = false;
-            var movesList = [newPoint, pieceId[1]+newPoint, pieceId[1]+oldPoint[0]+newPoint, pieceId[1]+oldPoint[1]+newPoint];
+            var movesList = [newPoint, pieceId[1] + newPoint, pieceId[1] + oldPoint[0] + newPoint, pieceId[1] + oldPoint[1] + newPoint];
             for (potentialMove in movesList) {
-                if (chess.moves({square: oldPoint}).includes(movesList[potentialMove]) || chess.moves({square: oldPoint}).includes(movesList[potentialMove]+'+') || chess.moves({square: oldPoint}).includes(movesList[potentialMove]+'#')) {
-                    chess.move(pieceId[1]+oldPoint+newPoint, {sloppy: true});
+                if (chess.moves({ square: oldPoint }).includes(movesList[potentialMove]) || chess.moves({ square: oldPoint }).includes(movesList[potentialMove] + '+') || chess.moves({ square: oldPoint }).includes(movesList[potentialMove] + '#')) {
+                    chess.move(pieceId[1] + oldPoint + newPoint, { sloppy: true });
                     moved = true;
                     break;
                 }
             }
-            movesList = [oldPoint[0]+'x'+newPoint, pieceId[1]+'x'+newPoint, pieceId[1]+oldPoint[0]+'x'+newPoint, pieceId[1]+oldPoint[1]+'x'+newPoint];
+            movesList = [oldPoint[0] + 'x' + newPoint, pieceId[1] + 'x' + newPoint, pieceId[1] + oldPoint[0] + 'x' + newPoint, pieceId[1] + oldPoint[1] + 'x' + newPoint];
             for (potentialMove in movesList) {
-                if (chess.moves({square: oldPoint}).includes(movesList[potentialMove]) || chess.moves({square: oldPoint}).includes(movesList[potentialMove]+'+') || chess.moves({square: oldPoint}).includes(movesList[potentialMove]+'#')) {
+                if (chess.moves({ square: oldPoint }).includes(movesList[potentialMove]) || chess.moves({ square: oldPoint }).includes(movesList[potentialMove] + '+') || chess.moves({ square: oldPoint }).includes(movesList[potentialMove] + '#')) {
                     let e = false;
-                    let move = chess.move(pieceId[1]+oldPoint+newPoint, {sloppy: true});
+                    let move = chess.move(pieceId[1] + oldPoint + newPoint, { sloppy: true });
                     if (move['flags'].includes('e')) {
                         e = true;
                     }
@@ -132,13 +169,13 @@
                 longCastle(pieceId[0]);
                 moved = true;
             }
-            movesList = [newPoint+'=Q', oldPoint[0]+'x'+newPoint+'=Q'];
+            movesList = [newPoint + '=Q', oldPoint[0] + 'x' + newPoint + '=Q'];
             var xy = getXYFromCoord(newPoint)
             var x = xy[0]
             var y = xy[1]
             for (potentialMove in movesList) {
-                if (chess.moves({square: oldPoint}).includes(movesList[potentialMove]) || chess.moves({square: oldPoint}).includes(movesList[potentialMove]+'+') || chess.moves({square: oldPoint}).includes(movesList[potentialMove]+'#')) {
-                    chess.move(pieceId[1]+oldPoint+newPoint+'=Q', {sloppy: true});
+                if (chess.moves({ square: oldPoint }).includes(movesList[potentialMove]) || chess.moves({ square: oldPoint }).includes(movesList[potentialMove] + '+') || chess.moves({ square: oldPoint }).includes(movesList[potentialMove] + '#')) {
+                    chess.move(pieceId[1] + oldPoint + newPoint + '=Q', { sloppy: true });
                     takePiece(oldPoint, newPoint, pieceId[0] + 'Q' + numQueens[pieceId[0]].toString(), false);
                     makeQueen(pieceId[0], numQueens[pieceId[0]], x, y);
                     numQueens[pieceId[0]] += 1;
@@ -156,7 +193,7 @@
                 let color = chess.turn();
                 for (i in expressions) {
                     if (expressions[i]['id'].includes(color + 'K1')) {
-                        calculator.setExpression({id: expressions[i]['id'], color: '#ff0000'});
+                        calculator.setExpression({ id: expressions[i]['id'], color: '#ff0000' });
                     }
                 }
                 if (color == 'w') {
@@ -189,14 +226,14 @@
                 for (i in expressions) {
                     if (expressions[i]['color'] == '#ff0000') {
                         if (expressions[i]['id'][0] == 'w') {
-                            calculator.setExpression({id: expressions[i]['id'], color: '#BA8C63'});
+                            calculator.setExpression({ id: expressions[i]['id'], color: '#BA8C63' });
                         }
                         else {
-                            calculator.setExpression({id: expressions[i]['id'], color: '#000000'});
+                            calculator.setExpression({ id: expressions[i]['id'], color: '#000000' });
                         }
                     }
                     if (expressions[i]['id'].includes(color + 'K1')) {
-                        calculator.setExpression({id: expressions[i]['id'], color: '#ff0000'});
+                        calculator.setExpression({ id: expressions[i]['id'], color: '#ff0000' });
                     }
                 }
                 if (color == 'w') {
@@ -211,10 +248,10 @@
                 for (i in expressions) {
                     if (expressions[i]['color'] == '#ff0000') {
                         if (expressions[i]['id'][0] == 'w') {
-                            calculator.setExpression({id: expressions[i]['id'], color: '#BA8C63'});
+                            calculator.setExpression({ id: expressions[i]['id'], color: '#BA8C63' });
                         }
                         else {
-                            calculator.setExpression({id: expressions[i]['id'], color: '#000000'});
+                            calculator.setExpression({ id: expressions[i]['id'], color: '#000000' });
                         }
                     }
                 }
@@ -229,15 +266,15 @@
                     for (i in expressions) {
                         if (expressions[i]['hidden'] == false && expressions[i]['id'].endsWith('.x')) {
                             currentX = expressions[i]['latex'].split('=');
-                            currentY = expressions[Number(i)+1]['latex'].split('=');
+                            currentY = expressions[Number(i) + 1]['latex'].split('=');
                             varX = currentX[0];
                             varY = currentY[0];
                             currentX = Number(currentX[1]);
                             currentY = Number(currentY[1]);
                             if (getCoordFromXY(Number(currentX), Number(currentY)) == blackMove[0].toLowerCase()) {
                                 var pieceIndex = expressions[i]['id'][2];
-                                calculator.setExpression({id: expressions[i]['id'], latex: varX + '=' + (currentX+adjustments[0]).toString()});
-                                calculator.setExpression({id: expressions[Number(i)+1]['id'], latex: varY + '=' + (currentY+adjustments[1]).toString()});
+                                calculator.setExpression({ id: expressions[i]['id'], latex: varX + '=' + (currentX + adjustments[0]).toString() });
+                                calculator.setExpression({ id: expressions[Number(i) + 1]['id'], latex: varY + '=' + (currentY + adjustments[1]).toString() });
                                 movePiece(blackMove[0].toLowerCase(), blackMove[1].toLowerCase(), 'b' + chess.get(blackMove[0].toLowerCase())['type'].toUpperCase() + pieceIndex);
                             }
                         }
@@ -247,55 +284,55 @@
                 document.getElementById('thinking').innerHTML = 'Black is thinking...'
             }
         }
-        function takePiece (oldPoint, newPoint, pieceId, e) {
+        function takePiece(oldPoint, newPoint, pieceId, e) {
             for (i in expressions) {
                 if (expressions[i]['id'].endsWith('.x')) {
                     let x = expressions[i]['latex'].split('=')[1];
-                    let y = expressions[Number(i)+1]['latex'].split('=')[1];
+                    let y = expressions[Number(i) + 1]['latex'].split('=')[1];
                     if ((getCoordFromXY(Number(x), Number(y)) == newPoint || (e && getCoordFromXY(Number(x), Number(y)) == newPoint[0] + oldPoint[1])) && expressions[i]['id'].slice(0, 3) != pieceId) {
                         for (var j in expressions) {
                             if (expressions[j]['id'].slice(0, 3) == expressions[i]['id'].slice(0, 3)) {
-                                calculator.setExpression({id: expressions[j]['id'], hidden: true})
+                                calculator.setExpression({ id: expressions[j]['id'], hidden: true })
                             }
                         }
                     }
                 }
             }
         }
-        function shortCastle (color) {
+        function shortCastle(color) {
             chess.move('O-O');
             for (i in expressions) {
                 if (expressions[i]['id'] == color + 'R2.x') {
                     let currentX = expressions[i]['latex'].split('=');
                     let varName = currentX[0]
                     currentX = Number(currentX[1])
-                    calculator.setExpression({id: color + 'R2.x', latex: varName + '=' + (currentX - 8).toString()});
+                    calculator.setExpression({ id: color + 'R2.x', latex: varName + '=' + (currentX - 8).toString() });
                 }
             }
         }
-        function longCastle (color) {
+        function longCastle(color) {
             chess.move('O-O-O');
             for (i in expressions) {
                 if (expressions[i]['id'] == color + 'R1.x') {
                     let currentX = expressions[i]['latex'].split('=');
                     let varName = currentX[0]
                     currentX = Number(currentX[1])
-                    calculator.setExpression({id: color + 'R1.x', latex: varName + '=' + (currentX + 12).toString()});
+                    calculator.setExpression({ id: color + 'R1.x', latex: varName + '=' + (currentX + 12).toString() });
                 }
             }
         }
-        function awSnap (oldPoint, newPoint, pieceId) {
+        function awSnap(oldPoint, newPoint, pieceId) {
             let letters = 'abcdefgh';
             let adjustments = [4 * (letters.indexOf(newPoint[0]) - letters.indexOf(oldPoint[0])), 4 * (Number(newPoint[1]) - Number(oldPoint[1]))]
             let expressions = calculator.getExpressions();
-            let currentX = expressions.find(x => x['id'] == pieceId+'.x')['latex'].split('=');
+            let currentX = expressions.find(x => x['id'] == pieceId + '.x')['latex'].split('=');
             let varName = currentX[0];
             currentX = Number(currentX[1]);
-            calculator.setExpression({id: pieceId + '.x', latex: varName + '=' + (Math.round((currentX - adjustments[0]) * 1e12) / 1e12).toString()})
-            let currentY = expressions.find(y => y['id'] == pieceId+'.y')['latex'].split('=');
+            calculator.setExpression({ id: pieceId + '.x', latex: varName + '=' + (Math.round((currentX - adjustments[0]) * 1e12) / 1e12).toString() })
+            let currentY = expressions.find(y => y['id'] == pieceId + '.y')['latex'].split('=');
             varName = currentY[0];
             currentY = Number(currentY[1]);
-            calculator.setExpression({id: pieceId + '.y', latex: varName + '=' + (Math.round((currentY - adjustments[1]) * 1e12) / 1e12).toString()})
+            calculator.setExpression({ id: pieceId + '.y', latex: varName + '=' + (Math.round((currentY - adjustments[1]) * 1e12) / 1e12).toString() })
         }
         var elt = document.getElementById('calculator');
         var calculator = Desmos.GraphingCalculator(elt);
@@ -309,7 +346,7 @@
         for (i = 1; i < 100; i++) {
             letters.push('n_{' + i.toString() + '}')
         }
-        function makeQueen (color, num, x, y) {
+        function makeQueen(color, num, x, y) {
             var id = color + 'Q' + num.toString();
             if (color == 'b') {
                 num += 0.5
@@ -318,374 +355,377 @@
             else {
                 graphColor = '#BA8C63';
             }
-            calculator.setExpression({hidden: false, id: id + '.1', latex: 'y=' + letters[4*num+57] + '-1.31\\left\\{-1.147\\le x-' + letters[4*num+56] + '\\le1.147\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.2', latex: 'x=' + letters[4*num+56] + '-1.147\\left\\{-1.31\\le y-' + letters[4*num+57] + '\\le-1\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[4*num+56] + '+0.817\\right)^{2}+\\left(y-' + letters[4*num+57] + '+1\\right)^{2}=0.1296\\left\\{x\\le ' + letters[4*num+56] + '-0.817\\right\\}\\left\\{y\\ge ' + letters[4*num+57] + '-1\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.4', latex: 'y=-\\frac{595}{248}\\left(x-' + letters[4*num+56] + '+0.817\\right)+' + letters[4*num+57] + '-0.64\\left\\{-1.313\\le x-' + letters[4*num+56] + '\\le-0.817\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.5', latex: '\\left(x-' + letters[4*num+56] + '+1.223\\right)^{2}+\\left(y-' + letters[4*num+57] + '-\\frac{5889}{6700}\\right)^{2}=\\frac{208849}{1795600}\\left\\{y\\ge\\frac{113.9}{60.3+\\sqrt{40870}}\\left(x-' + letters[4*num+56] + '+1.313\\right)+' + letters[4*num+57] + '+0.55\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.6', latex: 'y=\\frac{187.6}{\\sqrt{40870}-388.6}\\left(x-' + letters[4*num+56] + '+0.643\\right)+' + letters[4*num+57] + '+0.44\\left\\{0.44\\le y-' + letters[4*num+57] + '\\le0.72\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.7', latex: 'y=\\frac{77}{3}\\left(x-' + letters[4*num+56] + '+0.643\\right)+' + letters[4*num+57] + '+0.44\\left\\{-0.643\\le x-' + letters[4*num+56] + '\\le-0.613\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.8', latex: '\\left(x-' + letters[4*num+56] + '+0.453\\right)^{2}+\\left(y-' + letters[4*num+57] + '-\\frac{19699}{13000}\\right)^{2}=\\frac{20079361}{169000000}\\left\\{y\\ge\\frac{32.5}{\\sqrt{22659}+104}\\left(x-' + letters[4*num+56] + '+0.613\\right)+' + letters[4*num+57] + '+1.21\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.9', latex: 'y=\\frac{390}{\\sqrt{22659}-294.45}\\left(x-' + letters[4*num+56] + '\\right)+' + letters[4*num+57] + '+0.66\\left\\{0.66\\le y-' + letters[4*num+57] + '\\le+1.26\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.10', latex: 'y=-\\frac{390}{\\sqrt{22659}-294.45}\\left(x-' + letters[4*num+56] + '\\right)+' + letters[4*num+57] + '+0.66\\left\\{0.66\\le y-' + letters[4*num+57] + '\\le+1.26\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.11', latex: '\\left(x-' + letters[4*num+56] + '-0.453\\right)^{2}+\\left(y-' + letters[4*num+57] + '-\\frac{19699}{13000}\\right)^{2}=\\frac{20079361}{169000000}\\left\\{y\\ge-\\frac{32.5}{\\sqrt{22659}+104}\\left(x-' + letters[4*num+56] + '-0.613\\right)+' + letters[4*num+57] + '+1.21\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.12', latex: 'y=-\\frac{77}{3}\\left(x-' + letters[4*num+56] + '-0.643\\right)+' + letters[4*num+57] + '+0.44\\left\\{0.613\\le x-' + letters[4*num+56] + '\\le0.643\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.13', latex: 'y=-\\frac{187.6}{\\sqrt{40870}-388.6}\\left(x-' + letters[4*num+56] + '-0.643\\right)+' + letters[4*num+57] + '+0.44\\left\\{0.44\\le y-' + letters[4*num+57] + '\\le0.72\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.14', latex: '\\left(x-' + letters[4*num+56] + '-1.223\\right)^{2}+\\left(y-' + letters[4*num+57] + '-\\frac{5889}{6700}\\right)^{2}=\\frac{208849}{1795600}\\left\\{y\\ge-\\frac{113.9}{60.3+\\sqrt{40870}}\\left(x-' + letters[4*num+56] + '-1.313\\right)+' + letters[4*num+57] + '+0.55\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.15', latex: 'y=\\frac{595}{248}\\left(x-' + letters[4*num+56] + '-0.817\\right)+' + letters[4*num+57] + '-0.64\\left\\{0.817\\le x-' + letters[4*num+56] + '\\le1.313\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.16', latex: '\\frac{1296}{1089}\\left(x-' + letters[4*num+56] + '-0.817\\right)^{2}+\\left(y-' + letters[4*num+57] + '+1\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[4*num+56] + '+0.817\\right\\}\\left\\{y\\ge ' + letters[4*num+57] + '-1\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.17', latex: 'x=' + letters[4*num+56] + '+1.147\\left\\{-1.31\\le y-' + letters[4*num+57] + '\\le-1\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.18', latex: 'y=-\\frac{50000}{667489}\\left(x-' + letters[4*num+56] + '\\right)^{2}+' + letters[4*num+57] + '-0.59\\left\\{-0.817\\le x-' + letters[4*num+56] + '\\le0.817\\right\\}', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.xy', latex: '\\left(' + letters[4*num+56] + ',' + letters[4*num+57] + '\\right)', color: graphColor})
-            calculator.setExpression({hidden: false, id: id + '.x', latex: letters[4*num+56] + '=' + (4*x-17.987).toString(), sliderBounds: {min: '-13.987', max: '14.013', step: '4'}})
-            calculator.setExpression({hidden: false, id: id + '.y', latex: letters[4*num+57] + '=' + (4*y-18.3).toString(), sliderBounds: {min: '-14.3', max: '13.7', step: '4'}})
+            calculator.setExpression({ hidden: false, id: id + '.1', latex: 'y=' + letters[4 * num + 57] + '-1.31\\left\\{-1.147\\le x-' + letters[4 * num + 56] + '\\le1.147\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.2', latex: 'x=' + letters[4 * num + 56] + '-1.147\\left\\{-1.31\\le y-' + letters[4 * num + 57] + '\\le-1\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[4 * num + 56] + '+0.817\\right)^{2}+\\left(y-' + letters[4 * num + 57] + '+1\\right)^{2}=0.1296\\left\\{x\\le ' + letters[4 * num + 56] + '-0.817\\right\\}\\left\\{y\\ge ' + letters[4 * num + 57] + '-1\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.4', latex: 'y=-\\frac{595}{248}\\left(x-' + letters[4 * num + 56] + '+0.817\\right)+' + letters[4 * num + 57] + '-0.64\\left\\{-1.313\\le x-' + letters[4 * num + 56] + '\\le-0.817\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.5', latex: '\\left(x-' + letters[4 * num + 56] + '+1.223\\right)^{2}+\\left(y-' + letters[4 * num + 57] + '-\\frac{5889}{6700}\\right)^{2}=\\frac{208849}{1795600}\\left\\{y\\ge\\frac{113.9}{60.3+\\sqrt{40870}}\\left(x-' + letters[4 * num + 56] + '+1.313\\right)+' + letters[4 * num + 57] + '+0.55\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.6', latex: 'y=\\frac{187.6}{\\sqrt{40870}-388.6}\\left(x-' + letters[4 * num + 56] + '+0.643\\right)+' + letters[4 * num + 57] + '+0.44\\left\\{0.44\\le y-' + letters[4 * num + 57] + '\\le0.72\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.7', latex: 'y=\\frac{77}{3}\\left(x-' + letters[4 * num + 56] + '+0.643\\right)+' + letters[4 * num + 57] + '+0.44\\left\\{-0.643\\le x-' + letters[4 * num + 56] + '\\le-0.613\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.8', latex: '\\left(x-' + letters[4 * num + 56] + '+0.453\\right)^{2}+\\left(y-' + letters[4 * num + 57] + '-\\frac{19699}{13000}\\right)^{2}=\\frac{20079361}{169000000}\\left\\{y\\ge\\frac{32.5}{\\sqrt{22659}+104}\\left(x-' + letters[4 * num + 56] + '+0.613\\right)+' + letters[4 * num + 57] + '+1.21\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.9', latex: 'y=\\frac{390}{\\sqrt{22659}-294.45}\\left(x-' + letters[4 * num + 56] + '\\right)+' + letters[4 * num + 57] + '+0.66\\left\\{0.66\\le y-' + letters[4 * num + 57] + '\\le+1.26\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.10', latex: 'y=-\\frac{390}{\\sqrt{22659}-294.45}\\left(x-' + letters[4 * num + 56] + '\\right)+' + letters[4 * num + 57] + '+0.66\\left\\{0.66\\le y-' + letters[4 * num + 57] + '\\le+1.26\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.11', latex: '\\left(x-' + letters[4 * num + 56] + '-0.453\\right)^{2}+\\left(y-' + letters[4 * num + 57] + '-\\frac{19699}{13000}\\right)^{2}=\\frac{20079361}{169000000}\\left\\{y\\ge-\\frac{32.5}{\\sqrt{22659}+104}\\left(x-' + letters[4 * num + 56] + '-0.613\\right)+' + letters[4 * num + 57] + '+1.21\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.12', latex: 'y=-\\frac{77}{3}\\left(x-' + letters[4 * num + 56] + '-0.643\\right)+' + letters[4 * num + 57] + '+0.44\\left\\{0.613\\le x-' + letters[4 * num + 56] + '\\le0.643\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.13', latex: 'y=-\\frac{187.6}{\\sqrt{40870}-388.6}\\left(x-' + letters[4 * num + 56] + '-0.643\\right)+' + letters[4 * num + 57] + '+0.44\\left\\{0.44\\le y-' + letters[4 * num + 57] + '\\le0.72\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.14', latex: '\\left(x-' + letters[4 * num + 56] + '-1.223\\right)^{2}+\\left(y-' + letters[4 * num + 57] + '-\\frac{5889}{6700}\\right)^{2}=\\frac{208849}{1795600}\\left\\{y\\ge-\\frac{113.9}{60.3+\\sqrt{40870}}\\left(x-' + letters[4 * num + 56] + '-1.313\\right)+' + letters[4 * num + 57] + '+0.55\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.15', latex: 'y=\\frac{595}{248}\\left(x-' + letters[4 * num + 56] + '-0.817\\right)+' + letters[4 * num + 57] + '-0.64\\left\\{0.817\\le x-' + letters[4 * num + 56] + '\\le1.313\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.16', latex: '\\frac{1296}{1089}\\left(x-' + letters[4 * num + 56] + '-0.817\\right)^{2}+\\left(y-' + letters[4 * num + 57] + '+1\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[4 * num + 56] + '+0.817\\right\\}\\left\\{y\\ge ' + letters[4 * num + 57] + '-1\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.17', latex: 'x=' + letters[4 * num + 56] + '+1.147\\left\\{-1.31\\le y-' + letters[4 * num + 57] + '\\le-1\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.18', latex: 'y=-\\frac{50000}{667489}\\left(x-' + letters[4 * num + 56] + '\\right)^{2}+' + letters[4 * num + 57] + '-0.59\\left\\{-0.817\\le x-' + letters[4 * num + 56] + '\\le0.817\\right\\}', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.xy', latex: '\\left(' + letters[4 * num + 56] + ',' + letters[4 * num + 57] + '\\right)', color: graphColor })
+            calculator.setExpression({ hidden: false, id: id + '.x', latex: letters[4 * num + 56] + '=' + (4 * x - 17.987).toString(), sliderBounds: { min: '-13.987', max: '14.013', step: '4' } })
+            calculator.setExpression({ hidden: false, id: id + '.y', latex: letters[4 * num + 57] + '=' + (4 * y - 18.3).toString(), sliderBounds: { min: '-14.3', max: '13.7', step: '4' } })
         }
         function initGame() {
             document.getElementById('thinking').innerHTML = 'Loading...';
-            requestAnimationFrame(function(){requestAnimationFrame(function(){
-                // Board
-                for (i = 0; i < 9; i++) {
-                    calculator.setExpression({id: 'board' + (i+1).toString(), latex: 'y=' + (16-4*i).toString() + '\\left\\{-16\\le x\\le16\\right\\}', color: '#000000'});
-                }
-                for (i = 0; i < 9; i++) {
-                    calculator.setExpression({id: 'board' + (i+10).toString(), latex: 'x=' + (16-4*i).toString() + '\\left\\{-16\\le y\\le16\\right\\}', color: '#000000'});
-                }
-                for (i = 0; i < 4; i++) {
-                    calculator.setExpression({id: 'shading' + (i*8+1).toString(), latex: '-12\\le x\\le-8\\left\\{' + (12-8*i).toString() + '\\le y\\le' + (16-8*i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000'});
-                    calculator.setExpression({id: 'shading' + (i*8+2).toString(), latex: '-4\\le x\\le0\\left\\{' + (12-8*i).toString() + '\\le y\\le' + (16-8*i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000'});
-                    calculator.setExpression({id: 'shading' + (i*8+3).toString(), latex: '4\\le x\\le8\\left\\{' + (12-8*i).toString() + '\\le y\\le' + (16-8*i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000'});
-                    calculator.setExpression({id: 'shading' + (i*8+4).toString(), latex: '12\\le x\\le16\\left\\{' + (12-8*i).toString() + '\\le y\\le' + (16-8*i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000'});
-                    calculator.setExpression({id: 'shading' + (i*8+5).toString(), latex: '-16\\le x\\le-12\\left\\{' + (8-8*i).toString() + '\\le y\\le' + (12-8*i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000'});
-                    calculator.setExpression({id: 'shading' + (i*8+6).toString(), latex: '-8\\le x\\le-4\\left\\{' + (8-8*i).toString() + '\\le y\\le' + (12-8*i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000'});
-                    calculator.setExpression({id: 'shading' + (i*8+7).toString(), latex: '0\\le x\\le4\\left\\{' + (8-8*i).toString() + '\\le y\\le' + (12-8*i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000'});
-                    calculator.setExpression({id: 'shading' + (i*8+8).toString(), latex: '8\\le x\\le12\\left\\{' + (8-8*i).toString() + '\\le y\\le' + (12-8*i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000'});
-                }
-                // White pawns
-                for (i = 0; i < 8; i++) {
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.1', latex: 'y=-2.17+' + letters[2*i+1] + '\\left\\{-1.06+' + letters[2*i] + '\\le x\\le1.06+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.2', latex: '\\left(x+0.8-' + letters[2*i] + '\\right)^{2}+\\frac{0.0676}{0.4489}\\left(y+2.17-' + letters[2*i+1] + '\\right)^{2}=0.0676\\left\\{y\\ge-2.17+' + letters[2*i+1] + '\\right\\}\\left\\{x\\le-1+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.3', latex: 'y=\\frac{67\\sqrt{69}-1001}{208}\\left(x+0.6-' + letters[2*i] + '\\right)^{2}-1.4+' + letters[2*i+1] + '\\left\\{-1+' + letters[2*i] + '\\le x\\le-0.7+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.4', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.722}\\left(x+0.7-' + letters[2*i] + '\\right)+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2*i+1] + '\\left\\{-0.7+' + letters[2*i] + '\\le x\\le-0.5+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.5', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.1444}\\left(x+0.7-' + letters[2*i] + '\\right)^{2}+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2*i+1] + '\\left\\{-0.5+' + letters[2*i] + '\\le x\\le-0.32+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.6', latex: 'y=-0.85+' + letters[2*i+1] + '\\left\\{-0.56+' + letters[2*i] + '\\le x\\le-0.32+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.7', latex: 'x=\\frac{200}{121}\\left(y+0.63-' + letters[2*i+1] + '\\right)^{2}-0.64+' + letters[2*i] + '\\left\\{-0.85+' + letters[2*i+1] + '\\le y\\le-0.56+' + letters[2*i+1] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.8', latex: 'y=\\frac{1936}{2927}\\left(x-\\frac{2807591}{193600}-' + letters[2*i] + '\\right)+9.45+' + letters[2*i+1] + '\\left\\{-0.56+' + letters[2*i+1] + '\\le y\\le-0.4+' + letters[2*i+1] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.9', latex: '\\left(x-' + letters[2*i] + '\\right)^{2}+\\left(y-' + letters[2*i+1] + '\\right)^{2}=0.3121\\left\\{y\\ge ' + letters[2*i+1] + '-0.4\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.10', latex: 'y=-\\frac{1936}{2927}\\left(x+\\frac{2807591}{193600}-' + letters[2*i] + '\\right)+9.45+' + letters[2*i+1] + '\\left\\{-0.56+' + letters[2*i+1] + '\\le y\\le-0.4+' + letters[2*i+1] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.11', latex: 'x=-\\frac{200}{121}\\left(y+0.63-' + letters[2*i+1] + '\\right)^{2}+0.64+' + letters[2*i] + '\\left\\{-0.85+' + letters[2*i+1] + '\\le y\\le-0.56+' + letters[2*i+1] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.12', latex: 'y=-0.85+' + letters[2*i+1] + '\\left\\{0.32+' + letters[2*i] + '\\le x\\le0.56+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.13', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.1444}\\left(x-0.7-' + letters[2*i] + '\\right)^{2}+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2*i+1] + '\\left\\{0.32+' + letters[2*i] + '\\le x\\le0.5+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.14', latex: 'y=-\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.722}\\left(x-0.7-' + letters[2*i] + '\\right)+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2*i+1] + '\\left\\{0.5+' + letters[2*i] + '\\le x\\le0.7+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.15', latex: 'y=\\frac{67\\sqrt{69}-1001}{208}\\left(x-0.6-' + letters[2*i] + '\\right)^{2}-1.4+' + letters[2*i+1] + '\\left\\{0.7+' + letters[2*i] + '\\le x\\le1+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.16', latex: '\\left(x-0.8-' + letters[2*i] + '\\right)^{2}+\\frac{0.0676}{0.4489}\\left(y+2.17-' + letters[2*i+1] + '\\right)^{2}=0.0676\\left\\{y\\ge-2.17+' + letters[2*i+1] + '\\right\\}\\left\\{x\\ge1+' + letters[2*i] + '\\right\\}', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.xy', latex: '\\left(' + letters[2*i] + ', ' + letters[2*i+1] + '\\right)', color: '#BA8C63'});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.x', latex: letters[2*i] + '=' + (4*i-14).toString(), sliderBounds: {min: '-14', max: '14', step: '4'}});
-                    calculator.setExpression({hidden: false, id: 'wP'+(i+1).toString()+'.y', latex: letters[2*i+1] + '=-9.45', sliderBounds: {min: '-13.45', max: '14.55', step: '4'}});
-                }
-                // Black pawns
-                for (i = 8; i < 16; i++) {
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.1', latex: 'y=-2.17+' + letters[2*i+1] + '\\left\\{-1.06+' + letters[2*i] + '\\le x\\le1.06+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.2', latex: '\\left(x+0.8-' + letters[2*i] + '\\right)^{2}+\\frac{0.0676}{0.4489}\\left(y+2.17-' + letters[2*i+1] + '\\right)^{2}=0.0676\\left\\{y\\ge-2.17+' + letters[2*i+1] + '\\right\\}\\left\\{x\\le-1+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.3', latex: 'y=\\frac{67\\sqrt{69}-1001}{208}\\left(x+0.6-' + letters[2*i] + '\\right)^{2}-1.4+' + letters[2*i+1] + '\\left\\{-1+' + letters[2*i] + '\\le x\\le-0.7+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.4', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.722}\\left(x+0.7-' + letters[2*i] + '\\right)+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2*i+1] + '\\left\\{-0.7+' + letters[2*i] + '\\le x\\le-0.5+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.5', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.1444}\\left(x+0.7-' + letters[2*i] + '\\right)^{2}+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2*i+1] + '\\left\\{-0.5+' + letters[2*i] + '\\le x\\le-0.32+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.6', latex: 'y=-0.85+' + letters[2*i+1] + '\\left\\{-0.56+' + letters[2*i] + '\\le x\\le-0.32+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.7', latex: 'x=\\frac{200}{121}\\left(y+0.63-' + letters[2*i+1] + '\\right)^{2}-0.64+' + letters[2*i] + '\\left\\{-0.85+' + letters[2*i+1] + '\\le y\\le-0.56+' + letters[2*i+1] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.8', latex: 'y=\\frac{1936}{2927}\\left(x-\\frac{2807591}{193600}-' + letters[2*i] + '\\right)+9.45+' + letters[2*i+1] + '\\left\\{-0.56+' + letters[2*i+1] + '\\le y\\le-0.4+' + letters[2*i+1] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.9', latex: '\\left(x-' + letters[2*i] + '\\right)^{2}+\\left(y-' + letters[2*i+1] + '\\right)^{2}=0.3121\\left\\{y\\ge ' + letters[2*i+1] + '-0.4\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.10', latex: 'y=-\\frac{1936}{2927}\\left(x+\\frac{2807591}{193600}-' + letters[2*i] + '\\right)+9.45+' + letters[2*i+1] + '\\left\\{-0.56+' + letters[2*i+1] + '\\le y\\le-0.4+' + letters[2*i+1] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.11', latex: 'x=-\\frac{200}{121}\\left(y+0.63-' + letters[2*i+1] + '\\right)^{2}+0.64+' + letters[2*i] + '\\left\\{-0.85+' + letters[2*i+1] + '\\le y\\le-0.56+' + letters[2*i+1] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.12', latex: 'y=-0.85+' + letters[2*i+1] + '\\left\\{0.32+' + letters[2*i] + '\\le x\\le0.56+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.13', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.1444}\\left(x-0.7-' + letters[2*i] + '\\right)^{2}+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2*i+1] + '\\left\\{0.32+' + letters[2*i] + '\\le x\\le0.5+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.14', latex: 'y=-\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.722}\\left(x-0.7-' + letters[2*i] + '\\right)+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2*i+1] + '\\left\\{0.5+' + letters[2*i] + '\\le x\\le0.7+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.15', latex: 'y=\\frac{67\\sqrt{69}-1001}{208}\\left(x-0.6-' + letters[2*i] + '\\right)^{2}-1.4+' + letters[2*i+1] + '\\left\\{0.7+' + letters[2*i] + '\\le x\\le1+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.16', latex: '\\left(x-0.8-' + letters[2*i] + '\\right)^{2}+\\frac{0.0676}{0.4489}\\left(y+2.17-' + letters[2*i+1] + '\\right)^{2}=0.0676\\left\\{y\\ge-2.17+' + letters[2*i+1] + '\\right\\}\\left\\{x\\ge1+' + letters[2*i] + '\\right\\}', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.xy', latex: '\\left(' + letters[2*i] + ', ' + letters[2*i+1] + '\\right)', color: '#000000'});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.x', latex: letters[2*i] + '=' + (4*(i-8)-14).toString(), sliderBounds: {min: '-14', max: '14', step: '4'}});
-                    calculator.setExpression({hidden: false, id: 'bP'+(i-7).toString()+'.y', latex: letters[2*i+1] + '=10.55', sliderBounds: {min: '-13.45', max: '14.55', step: '4'}});
-                }
-                // White rooks
-                for (i = 0; i < 2; i++) {
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.1', latex: 'y=' + letters[2*i+33] + '-2.31\\left\\{-1.16\\le x-' + letters[2*i+32] + '\\le1.16\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.2', latex: 'x=' + letters[2*i+32] + '-1.16\\left\\{-2.31\\le y-' + letters[2*i+33] + '\\le-2\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+32] + '+0.83\\right)^{2}+\\left(y-' + letters[2*i+33] + '+2\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2*i+32] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[2*i+33] + '-2\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.4', latex: 'y=8.4\\left(x-' + letters[2*i+32] + '+0.83\\right)+' + letters[2*i+33] + '-1.64\\left\\{-0.83\\le x-' + letters[2*i+32] + '\\le-0.68\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.5', latex: 'y=\\frac{2800}{729}\\left(x-' + letters[2*i+32] + '+0.68\\right)^{2}+' + letters[2*i+33] + '-0.38\\left\\{-0.95\\le x-' + letters[2*i+32] + '\\le-0.68\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.6', latex: 'y=-\\frac{55}{3}\\left(x-' + letters[2*i+32] + '+0.95\\right)+' + letters[2*i+33] + '-0.1\\left\\{-0.98\\le x-' + letters[2*i+32] + '\\le-0.95\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.7', latex: 'x=\\frac{1075}{36}\\left(y-' + letters[2*i+33] + '-0.45\\right)^{2}+' + letters[2*i+32] + '-0.98\\left\\{0.45\\le y-' + letters[2*i+33] + '\\le0.57\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.8', latex: 'y=-\\frac{37}{9}\\left(x-' + letters[2*i+32] + '+0.55\\right)+' + letters[2*i+33] + '+0.57\\left\\{-0.55\\le x-' + letters[2*i+32] + '\\le-0.46\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.9', latex: 'y=' + letters[2*i+33] + '+0.2\\left\\{-0.46\\le x-' + letters[2*i+32] + '\\le-0.31\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.10', latex: 'y=\\frac{40}{3}\\left(x-' + letters[2*i+32] + '+0.31\\right)+' + letters[2*i+33] + '+0.2\\left\\{-0.31\\le x-' + letters[2*i+32] + '\\le-0.28\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.11', latex: 'y=-\\frac{25}{98}\\left(x-' + letters[2*i+32] + '\\right)^{2}+' + letters[2*i+33] + '+0.62\\left\\{-0.28\\le x-' + letters[2*i+32] + '\\le0.28\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.12', latex: 'y=-\\frac{40}{3}\\left(x-' + letters[2*i+32] + '-0.31\\right)+' + letters[2*i+33] + '+0.2\\left\\{0.28\\le x-' + letters[2*i+32] + '\\le0.31\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.13', latex: 'y=' + letters[2*i+33] + '+0.2\\left\\{0.31\\le x-' + letters[2*i+32] + '\\le0.46\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.14', latex: 'y=\\frac{37}{9}\\left(x-' + letters[2*i+32] + '-0.55\\right)+' + letters[2*i+33] + '+0.57\\left\\{0.46\\le x-' + letters[2*i+32] + '\\le0.55\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.15', latex: 'x=-\\frac{1075}{36}\\left(y-' + letters[2*i+33] + '-0.45\\right)^{2}+' + letters[2*i+32] + '+0.98\\left\\{0.45\\le y-' + letters[2*i+33] + '\\le0.57\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.16', latex: 'y=\\frac{55}{3}\\left(x-' + letters[2*i+32] + '-0.95\\right)+' + letters[2*i+33] + '-0.1\\left\\{0.95\\le x-' + letters[2*i+32] + '\\le0.98\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.17', latex: 'y=\\frac{2800}{729}\\left(x-' + letters[2*i+32] + '-0.68\\right)^{2}+' + letters[2*i+33] + '-0.38\\left\\{0.68\\le x-' + letters[2*i+32] + '\\le0.95\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.18', latex: 'y=-8.4\\left(x-' + letters[2*i+32] + '-0.83\\right)+' + letters[2*i+33] + '-1.64\\left\\{0.68\\le x-' + letters[2*i+32] + '\\le0.83\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.19', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+32] + '-0.83\\right)^{2}+\\left(y-' + letters[2*i+33] + '+2\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2*i+32] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[2*i+33] + '-2\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.20', latex: 'x=' + letters[2*i+32] + '+1.16\\left\\{-2.31\\le y-' + letters[2*i+33] + '\\le-2\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.21', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[2*i+32] + '\\right)^{2}+' + letters[2*i+33] + '-1.59\\left\\{-0.83\\le x-' + letters[2*i+32] + '\\le0.83\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.22', latex: 'y=-\\frac{400}{4623}\\left(x-' + letters[2*i+32] + '\\right)^{2}+' + letters[2*i+33] + '-0.34\\left\\{-0.68\\le x-' + letters[2*i+32] + '\\le0.68\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.xy', latex: '\\left(' + letters[2*i+32] + ', ' + letters[2*i+33] + '\\right)', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.x', latex: letters[2*i+32] + '=' + (28*i-14).toString(), sliderBounds: {min: '-14', max: '14', step: '4'}})
-                    calculator.setExpression({hidden: false, id: 'wR'+(i+1).toString()+'.y', latex: letters[2*i+33] + '=-13.3', sliderBounds: {min: '-13.3', max: '14.7', step: '4'}})
-                }
-                // Black rooks
-                for (i = 2; i < 4; i++) {
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.1', latex: 'y=' + letters[2*i+33] + '-2.31\\left\\{-1.16\\le x-' + letters[2*i+32] + '\\le1.16\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.2', latex: 'x=' + letters[2*i+32] + '-1.16\\left\\{-2.31\\le y-' + letters[2*i+33] + '\\le-2\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+32] + '+0.83\\right)^{2}+\\left(y-' + letters[2*i+33] + '+2\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2*i+32] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[2*i+33] + '-2\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.4', latex: 'y=8.4\\left(x-' + letters[2*i+32] + '+0.83\\right)+' + letters[2*i+33] + '-1.64\\left\\{-0.83\\le x-' + letters[2*i+32] + '\\le-0.68\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.5', latex: 'y=\\frac{2800}{729}\\left(x-' + letters[2*i+32] + '+0.68\\right)^{2}+' + letters[2*i+33] + '-0.38\\left\\{-0.95\\le x-' + letters[2*i+32] + '\\le-0.68\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.6', latex: 'y=-\\frac{55}{3}\\left(x-' + letters[2*i+32] + '+0.95\\right)+' + letters[2*i+33] + '-0.1\\left\\{-0.98\\le x-' + letters[2*i+32] + '\\le-0.95\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.7', latex: 'x=\\frac{1075}{36}\\left(y-' + letters[2*i+33] + '-0.45\\right)^{2}+' + letters[2*i+32] + '-0.98\\left\\{0.45\\le y-' + letters[2*i+33] + '\\le0.57\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.8', latex: 'y=-\\frac{37}{9}\\left(x-' + letters[2*i+32] + '+0.55\\right)+' + letters[2*i+33] + '+0.57\\left\\{-0.55\\le x-' + letters[2*i+32] + '\\le-0.46\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.9', latex: 'y=' + letters[2*i+33] + '+0.2\\left\\{-0.46\\le x-' + letters[2*i+32] + '\\le-0.31\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.10', latex: 'y=\\frac{40}{3}\\left(x-' + letters[2*i+32] + '+0.31\\right)+' + letters[2*i+33] + '+0.2\\left\\{-0.31\\le x-' + letters[2*i+32] + '\\le-0.28\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.11', latex: 'y=-\\frac{25}{98}\\left(x-' + letters[2*i+32] + '\\right)^{2}+' + letters[2*i+33] + '+0.62\\left\\{-0.28\\le x-' + letters[2*i+32] + '\\le0.28\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.12', latex: 'y=-\\frac{40}{3}\\left(x-' + letters[2*i+32] + '-0.31\\right)+' + letters[2*i+33] + '+0.2\\left\\{0.28\\le x-' + letters[2*i+32] + '\\le0.31\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.13', latex: 'y=' + letters[2*i+33] + '+0.2\\left\\{0.31\\le x-' + letters[2*i+32] + '\\le0.46\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.14', latex: 'y=\\frac{37}{9}\\left(x-' + letters[2*i+32] + '-0.55\\right)+' + letters[2*i+33] + '+0.57\\left\\{0.46\\le x-' + letters[2*i+32] + '\\le0.55\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.15', latex: 'x=-\\frac{1075}{36}\\left(y-' + letters[2*i+33] + '-0.45\\right)^{2}+' + letters[2*i+32] + '+0.98\\left\\{0.45\\le y-' + letters[2*i+33] + '\\le0.57\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.16', latex: 'y=\\frac{55}{3}\\left(x-' + letters[2*i+32] + '-0.95\\right)+' + letters[2*i+33] + '-0.1\\left\\{0.95\\le x-' + letters[2*i+32] + '\\le0.98\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.17', latex: 'y=\\frac{2800}{729}\\left(x-' + letters[2*i+32] + '-0.68\\right)^{2}+' + letters[2*i+33] + '-0.38\\left\\{0.68\\le x-' + letters[2*i+32] + '\\le0.95\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.18', latex: 'y=-8.4\\left(x-' + letters[2*i+32] + '-0.83\\right)+' + letters[2*i+33] + '-1.64\\left\\{0.68\\le x-' + letters[2*i+32] + '\\le0.83\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.19', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+32] + '-0.83\\right)^{2}+\\left(y-' + letters[2*i+33] + '+2\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2*i+32] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[2*i+33] + '-2\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.20', latex: 'x=' + letters[2*i+32] + '+1.16\\left\\{-2.31\\le y-' + letters[2*i+33] + '\\le-2\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.21', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[2*i+32] + '\\right)^{2}+' + letters[2*i+33] + '-1.59\\left\\{-0.83\\le x-' + letters[2*i+32] + '\\le0.83\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.22', latex: 'y=-\\frac{400}{4623}\\left(x-' + letters[2*i+32] + '\\right)^{2}+' + letters[2*i+33] + '-0.34\\left\\{-0.68\\le x-' + letters[2*i+32] + '\\le0.68\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.xy', latex: '\\left(' + letters[2*i+32] + ', ' + letters[2*i+33] + '\\right)', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.x', latex: letters[2*i+32] + '=' + (28*(i-2)-14).toString(), sliderBounds: {min: '-14', max: '14', step: '4'}})
-                    calculator.setExpression({hidden: false, id: 'bR'+(i-1).toString()+'.y', latex: letters[2*i+33] + '=14.7', sliderBounds: {min: '-13.3', max: '14.7', step: '4'}})
-                }
-                // White bishops
-                for (i = 0; i < 2; i++) {
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.1', latex: 'y=' + letters[2*i+41] + '-1.11\\left\\{-1.16\\le x-' + letters[2*i+40] + '\\le1.16\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.2', latex: 'x=' + letters[2*i+40] + '-1.16\\left\\{-1.11\\le y-' + letters[2*i+41] + '\\le-0.8\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+40] + '+0.83\\right)^{2}+\\left(y-' + letters[2*i+41] + '+0.8\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2*i+40] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[2*i+41] + '-0.8\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.4', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+40] + '-0.83\\right)^{2}+\\left(y-' + letters[2*i+41] + '+0.8\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2*i+40] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[2*i+41] + '-0.8\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.5', latex: 'x=' + letters[2*i+40] + '+1.16\\left\\{-1.11\\le y-' + letters[2*i+41] + '\\le-0.8\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.6', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[2*i+40] + '\\right)^{2}+' + letters[2*i+41] + '-0.39\\left\\{-0.83\\le x-' + letters[2*i+40] + '\\le0.83\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.7', latex: 'x=0.45\\left(y-' + letters[2*i+41] + '-0.42\\right)^{2}+' + letters[2*i+40] + '-0.95\\left\\{-\\frac{500}{6889}\\left(x-' + letters[2*i+40] + '\\right)^{2}-0.39\\le y-' + letters[2*i+41] + '\\le1.64\\right\\}\\left\\{\\left(x-' + letters[2*i+40] + '+0.02\\right)^{2}+\\left(y+' + letters[2*i+41] + '-1.82\\right)^{2}\\ge0.1\\right\\}\\left\\{x\\le ' + letters[2*i+40] + '\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.8', latex: '\\left(x-' + letters[2*i+40] + '+0.02\\right)^{2}+\\left(y-' + letters[2*i+41] + '-1.82\\right)^{2}=0.1\\left\\{x\\le0.45\\left(y-' + letters[2*i+41] + '-0.42\\right)^{2}+' + letters[2*i+40] + '-0.95\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.9', latex: '\\left(x-' + letters[2*i+40] + '+0.02\\right)^{2}+\\left(y-' + letters[2*i+41] + '-1.82\\right)^{2}=0.1\\left\\{x\\ge0.45\\left(y-' + letters[2*i+41] + '-0.42\\right)^{2}+' + letters[2*i+40] + '-0.95\\right\\}\\left\\{y-' + letters[2*i+41] + '\\ge1.82\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.10', latex: 'x=\\frac{0.09+\\sqrt{0.1}}{1.2544}\\left(y-' + letters[2*i+41] + '-0.7\\right)^{2}+' + letters[2*i+40] + '-0.11\\left\\{0.7\\le y-' + letters[2*i+41] + '\\le1.82\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.11', latex: 'x=' + letters[2*i+40] + '-0.11\\left\\{0.46\\le y-' + letters[2*i+41] + '\\le0.7\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.12', latex: 'y=' + letters[2*i+41] + '+0.46\\left\\{-0.11\\le x-' + letters[2*i+40] + '\\le0.12\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.13', latex: 'x=\\frac{2700}{11236}\\left(y-' + letters[2*i+41] + '-0.46\\right)^{2}+' + letters[2*i+40] + '+0.12\\left\\{0.46\\le y-' + letters[2*i+41] + '\\le1.52\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.14', latex: 'x=-\\frac{56}{121}\\left(y-' + letters[2*i+41] + '-0.42\\right)^{2}+' + letters[2*i+40] + '+0.95\\left\\{-\\frac{500}{6889}\\left(x-' + letters[2*i+40] + '\\right)^{2}-0.39\\le y-' + letters[2*i+41] + '\\le1.52\\right\\}\\left\\{x\\ge ' + letters[2*i+40] + '\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.xy', latex: '\\left(' + letters[2*i+40] + ',' + letters[2*i+41] + '\\right)', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.x', latex: letters[2*i+40] + '=' + (12*i-6.03).toString(), sliderBounds: {min: '-14.03', max: '13.97', step: '4'}})
-                    calculator.setExpression({hidden: false, id: 'wB'+(i+1).toString()+'.y', latex: letters[2*i+41] + '=-14.5', sliderBounds: {min: '-14.5', max: '13.5', step: '4'}})
-                }
-                // Black bishops
-                for (i = 2; i < 4; i++) {
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.1', latex: 'y=' + letters[2*i+41] + '-1.11\\left\\{-1.16\\le x-' + letters[2*i+40] + '\\le1.16\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.2', latex: 'x=' + letters[2*i+40] + '-1.16\\left\\{-1.11\\le y-' + letters[2*i+41] + '\\le-0.8\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+40] + '+0.83\\right)^{2}+\\left(y-' + letters[2*i+41] + '+0.8\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2*i+40] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[2*i+41] + '-0.8\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.4', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+40] + '-0.83\\right)^{2}+\\left(y-' + letters[2*i+41] + '+0.8\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2*i+40] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[2*i+41] + '-0.8\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.5', latex: 'x=' + letters[2*i+40] + '+1.16\\left\\{-1.11\\le y-' + letters[2*i+41] + '\\le-0.8\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.6', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[2*i+40] + '\\right)^{2}+' + letters[2*i+41] + '-0.39\\left\\{-0.83\\le x-' + letters[2*i+40] + '\\le0.83\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.7', latex: 'x=0.45\\left(y-' + letters[2*i+41] + '-0.42\\right)^{2}+' + letters[2*i+40] + '-0.95\\left\\{-\\frac{500}{6889}\\left(x-' + letters[2*i+40] + '\\right)^{2}-0.39\\le y-' + letters[2*i+41] + '\\le1.64\\right\\}\\left\\{\\left(x-' + letters[2*i+40] + '+0.02\\right)^{2}+\\left(y+' + letters[2*i+41] + '-1.82\\right)^{2}\\ge0.1\\right\\}\\left\\{x\\le ' + letters[2*i+40] + '\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.8', latex: '\\left(x-' + letters[2*i+40] + '+0.02\\right)^{2}+\\left(y-' + letters[2*i+41] + '-1.82\\right)^{2}=0.1\\left\\{x\\le0.45\\left(y-' + letters[2*i+41] + '-0.42\\right)^{2}+' + letters[2*i+40] + '-0.95\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.9', latex: '\\left(x-' + letters[2*i+40] + '+0.02\\right)^{2}+\\left(y-' + letters[2*i+41] + '-1.82\\right)^{2}=0.1\\left\\{x\\ge0.45\\left(y-' + letters[2*i+41] + '-0.42\\right)^{2}+' + letters[2*i+40] + '-0.95\\right\\}\\left\\{y-' + letters[2*i+41] + '\\ge1.82\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.10', latex: 'x=\\frac{0.09+\\sqrt{0.1}}{1.2544}\\left(y-' + letters[2*i+41] + '-0.7\\right)^{2}+' + letters[2*i+40] + '-0.11\\left\\{0.7\\le y-' + letters[2*i+41] + '\\le1.82\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.11', latex: 'x=' + letters[2*i+40] + '-0.11\\left\\{0.46\\le y-' + letters[2*i+41] + '\\le0.7\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.12', latex: 'y=' + letters[2*i+41] + '+0.46\\left\\{-0.11\\le x-' + letters[2*i+40] + '\\le0.12\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.13', latex: 'x=\\frac{2700}{11236}\\left(y-' + letters[2*i+41] + '-0.46\\right)^{2}+' + letters[2*i+40] + '+0.12\\left\\{0.46\\le y-' + letters[2*i+41] + '\\le1.52\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.14', latex: 'x=-\\frac{56}{121}\\left(y-' + letters[2*i+41] + '-0.42\\right)^{2}+' + letters[2*i+40] + '+0.95\\left\\{-\\frac{500}{6889}\\left(x-' + letters[2*i+40] + '\\right)^{2}-0.39\\le y-' + letters[2*i+41] + '\\le1.52\\right\\}\\left\\{x\\ge ' + letters[2*i+40] + '\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.xy', latex: '\\left(' + letters[2*i+40] + ',' + letters[2*i+41] + '\\right)', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.x', latex: letters[2*i+40] + '=' + (12*(i-2)-6.03).toString(), sliderBounds: {min: '-14.03', max: '13.97', step: '4'}})
-                    calculator.setExpression({hidden: false, id: 'bB'+(i-1).toString()+'.y', latex: letters[2*i+41] + '=13.5', sliderBounds: {min: '-14.5', max: '13.5', step: '4'}})
-                }
-                // White king
-                {
-                calculator.setExpression({id: 'wK1.1', latex: 'y=' + letters[49] + '-1.45\\left\\{-1.16\\le x-' + letters[48] + '\\le1.16\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.2', latex: 'x=' + letters[48] + '-1.16\\left\\{-1.45\\le y-' + letters[49] + '\\le-1.14\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[48] + '+0.83\\right)^{2}+\\left(y-' + letters[49] + '+1.14\\right)^{2}=0.1296\\left\\{x\\le ' + letters[48] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[49] + '-1.14\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.4', latex: 'y=-1.17\\left(x-' + letters[48] + '+1.47466\\right)+' + letters[49] + '-0.09\\left\\{\\frac{1296}{1089}\\left(x-' + letters[48] + '+0.83\\right)^{2}+\\left(y-' + letters[49] + '+1.14\\right)^{2}\\ge0.1296\\right\\}\\left\\{-1.09\\le y-' + letters[49] + '\\le-0.09\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.5', latex: 'x=0.6\\left(y-' + letters[49] + '-0.24\\right)^{2}+' + letters[48] + '-1.54\\left\\{\\left(x-' + letters[48] + '+0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\le0.64\\right\\}\\left\\{y\\ge ' + letters[49] + '-0.09\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.6', latex: '\\left(x-' + letters[48] + '+0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}=0.64\\left\\{0.24\\le y-' + letters[49] + '\\le-0.4\\left(x-' + letters[48] + '+0.77\\right)^{2}+1.01\\right\\}\\left\\{0.6\\left(y-' + letters[49] + '-0.24\\right)^{2}-1.54\\le x-' + letters[48] + '\\le-0.77\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.7', latex: 'y=-0.4\\left(x-' + letters[48] + '+0.77\\right)^{2}+' + letters[49] + '+1.01\\left\\{\\left(x-' + letters[48] + '+0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\le0.64\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.8', latex: 'y=-0.4\\left(x-' + letters[48] + '+0.77\\right)^{2}+' + letters[49] + '+1.01\\left\\{\\left(x-' + letters[48] + '+0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\ge0.64\\right\\}\\left\\{-0.77\\le x-' + letters[48] + '\\le-0.3\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.9', latex: 'y=\\frac{4459}{1500}\\left(x-' + letters[48] + '+0.24\\right)+' + letters[49] + '+1.1\\left\\{-0.3\\le x-' + letters[48] + '\\le-0.24\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.10', latex: 'y=' + letters[49] + '+1.1\\left\\{-0.5\\le x-' + letters[48] + '\\le-0.24\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.11', latex: 'x=' + letters[48] + '-0.5\\left\\{1.1\\le y-' + letters[49] + '\\le1.56\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.12', latex: 'y=' + letters[49] + '+1.56\\left\\{-0.5\\le x-' + letters[48] + '\\le-0.23\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.13', latex: 'x=' + letters[48] + '-0.23\\left\\{1.56\\le y-' + letters[49] + '\\le1.83\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.14', latex: 'y=' + letters[49] + '+1.83\\left\\{-0.23\\le x-' + letters[48] + '\\le0.23\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.15', latex: 'x=' + letters[48] + '+0.23\\left\\{1.56\\le y-' + letters[49] + '\\le1.83\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.16', latex: 'y=' + letters[49] + '+1.56\\left\\{0.23\\le x-' + letters[48] + '\\le0.5\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.17', latex: 'x=' + letters[48] + '+0.5\\left\\{1.1\\le y-' + letters[49] + '\\le1.56\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.18', latex: 'y=' + letters[49] + '+1.1\\left\\{0.24\\le x-' + letters[48] + '\\le0.5\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.19', latex: 'y=-\\frac{4459}{1500}\\left(x-' + letters[48] + '-0.24\\right)+' + letters[49] + '+1.1\\left\\{0.24\\le x-' + letters[48] + '\\le0.3\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.20', latex: 'y=-0.4\\left(x-' + letters[48] + '-0.77\\right)^{2}+' + letters[49] + '+1.01\\left\\{\\left(x-' + letters[48] + '-0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\ge0.64\\right\\}\\left\\{0.3\\le x-' + letters[48] + '\\le0.77\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.21', latex: 'y=-0.4\\left(x-' + letters[48] + '-0.77\\right)^{2}+' + letters[49] + '+1.01\\left\\{\\left(x-' + letters[48] + '-0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\le0.64\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.22', latex: '\\left(x-' + letters[48] + '-0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}=0.64\\left\\{0.24\\le y-' + letters[49] + '\\le-0.4\\left(x-' + letters[48] + '-0.77\\right)^{2}+1.01\\right\\}\\left\\{0.77\\le x-' + letters[48] + '\\le-0.6\\left(y-' + letters[49] + '-0.24\\right)^{2}+1.54\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.23', latex: 'x=-0.6\\left(y-' + letters[49] + '-0.24\\right)^{2}+' + letters[48] + '+1.54\\left\\{\\left(x-' + letters[48] + '-0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\le0.64\\right\\}\\left\\{y\\ge ' + letters[49] + '-0.09\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.24', latex: 'y=1.17\\left(x-' + letters[48] + '-1.47466\\right)+' + letters[49] + '-0.09\\left\\{\\frac{1296}{1089}\\left(x-' + letters[48] + '-0.83\\right)^{2}+\\left(y-' + letters[49] + '+1.14\\right)^{2}\\ge0.1296\\right\\}\\left\\{-1.09\\le y-' + letters[49] + '\\le-0.09\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.25', latex: '\\frac{1296}{1089}\\left(x-' + letters[48] + '-0.83\\right)^{2}+\\left(y-' + letters[49] + '+1.14\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[48] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[49] + '-1.14\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.26', latex: 'x=' + letters[48] + '+1.16\\left\\{-1.45\\le y-' + letters[49] + '\\le-1.14\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.27', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[48] + '\\right)^{2}+' + letters[49] + '-0.73\\left\\{-0.83\\le x-' + letters[48] + '\\le0.83\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.28', latex: 'x=' + letters[48] + '-0.29\\left\\{-0.31\\le y-' + letters[49] + '\\le0.31\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.29', latex: 'y=-\\frac{325}{289}\\left(x-' + letters[48] + '+0.63\\right)^{2}+' + letters[49] + '+0.44\\left\\{-0.63\\le x-' + letters[48] + '\\le-0.29\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.30', latex: 'y=-\\frac{78125}{45796}\\left(x-' + letters[48] + '+0.63\\right)^{2}+' + letters[49] + '+0.44\\left\\{-0.8012\\le x-' + letters[48] + '\\le-0.63\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.31', latex: 'x=3.078125\\left(y-' + letters[49] + '-0.23\\right)^{2}+' + letters[48] + '-0.88\\left\\{0.23\\le y-' + letters[49] + '\\le0.39\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.32', latex: 'x=\\frac{75}{49}\\left(y-' + letters[49] + '-0.23\\right)^{2}+' + letters[48] + '-0.88\\left\\{0.09\\le y-' + letters[49] + '\\le0.23\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.33', latex: 'y=-\\frac{80}{69}\\left(x-' + letters[48] + '+0.505\\right)+' + letters[49] + '-0.31\\left\\{-0.85\\le x-' + letters[48] + '\\le-0.505\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.34', latex: 'y=' + letters[49] + '-0.31\\left\\{-0.505\\le x-' + letters[48] + '\\le-0.29\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.35', latex: 'x=' + letters[48] + '+0.29\\left\\{-0.31\\le y-' + letters[49] + '\\le0.31\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.36', latex: 'y=-\\frac{325}{289}\\left(x-' + letters[48] + '-0.63\\right)^{2}+' + letters[49] + '+0.44\\left\\{0.29\\le x-' + letters[48] + '\\le0.63\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.37', latex: 'y=-\\frac{78125}{45796}\\left(x-' + letters[48] + '-0.63\\right)^{2}+' + letters[49] + '+0.44\\left\\{0.63\\le x-' + letters[48] + '\\le0.8012\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.38', latex: 'x=-3.078125\\left(y-' + letters[49] + '-0.23\\right)^{2}+' + letters[48] + '+0.88\\left\\{0.23\\le y-' + letters[49] + '\\le0.39\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.39', latex: 'x=-\\frac{75}{49}\\left(y-' + letters[49] + '-0.23\\right)^{2}+' + letters[48] + '+0.88\\left\\{0.09\\le y-' + letters[49] + '\\le0.23\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.40', latex: 'y=\\frac{80}{69}\\left(x-' + letters[48] + '-0.505\\right)+' + letters[49] + '-0.31\\left\\{0.505\\le x-' + letters[48] + '\\le0.85\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.41', latex: 'y=' + letters[49] + '-0.31\\left\\{0.29\\le x-' + letters[48] + '\\le0.505\\right\\}', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.xy', latex: '\\left(' + letters[48] + ',' + letters[49] + '\\right)', color: '#BA8C63'})
-                calculator.setExpression({id: 'wK1.x', latex: letters[48] + '=2.01', sliderBounds: {min: '-13.99', max: '14.01', step: '4'}})
-                calculator.setExpression({id: 'wK1.y', latex: letters[49] + '=-14.16', sliderBounds: {min: '-14.16', max: '13.84', step: '4'}})
-                }
-                // Black king
-                {
-                calculator.setExpression({id: 'bK1.1', latex: 'y=' + letters[51] + '-1.45\\left\\{-1.16\\le x-' + letters[50] + '\\le1.16\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.2', latex: 'x=' + letters[50] + '-1.16\\left\\{-1.45\\le y-' + letters[51] + '\\le-1.14\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[50] + '+0.83\\right)^{2}+\\left(y-' + letters[51] + '+1.14\\right)^{2}=0.1296\\left\\{x\\le ' + letters[50] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[51] + '-1.14\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.4', latex: 'y=-1.17\\left(x-' + letters[50] + '+1.47466\\right)+' + letters[51] + '-0.09\\left\\{\\frac{1296}{1089}\\left(x-' + letters[50] + '+0.83\\right)^{2}+\\left(y-' + letters[51] + '+1.14\\right)^{2}\\ge0.1296\\right\\}\\left\\{-1.09\\le y-' + letters[51] + '\\le-0.09\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.5', latex: 'x=0.6\\left(y-' + letters[51] + '-0.24\\right)^{2}+' + letters[50] + '-1.54\\left\\{\\left(x-' + letters[50] + '+0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\le0.64\\right\\}\\left\\{y\\ge ' + letters[51] + '-0.09\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.6', latex: '\\left(x-' + letters[50] + '+0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}=0.64\\left\\{0.24\\le y-' + letters[51] + '\\le-0.4\\left(x-' + letters[50] + '+0.77\\right)^{2}+1.01\\right\\}\\left\\{0.6\\left(y-' + letters[51] + '-0.24\\right)^{2}-1.54\\le x-' + letters[50] + '\\le-0.77\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.7', latex: 'y=-0.4\\left(x-' + letters[50] + '+0.77\\right)^{2}+' + letters[51] + '+1.01\\left\\{\\left(x-' + letters[50] + '+0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\le0.64\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.8', latex: 'y=-0.4\\left(x-' + letters[50] + '+0.77\\right)^{2}+' + letters[51] + '+1.01\\left\\{\\left(x-' + letters[50] + '+0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\ge0.64\\right\\}\\left\\{-0.77\\le x-' + letters[50] + '\\le-0.3\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.9', latex: 'y=\\frac{4459}{1500}\\left(x-' + letters[50] + '+0.24\\right)+' + letters[51] + '+1.1\\left\\{-0.3\\le x-' + letters[50] + '\\le-0.24\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.10', latex: 'y=' + letters[51] + '+1.1\\left\\{-0.5\\le x-' + letters[50] + '\\le-0.24\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.11', latex: 'x=' + letters[50] + '-0.5\\left\\{1.1\\le y-' + letters[51] + '\\le1.56\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.12', latex: 'y=' + letters[51] + '+1.56\\left\\{-0.5\\le x-' + letters[50] + '\\le-0.23\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.13', latex: 'x=' + letters[50] + '-0.23\\left\\{1.56\\le y-' + letters[51] + '\\le1.83\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.14', latex: 'y=' + letters[51] + '+1.83\\left\\{-0.23\\le x-' + letters[50] + '\\le0.23\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.15', latex: 'x=' + letters[50] + '+0.23\\left\\{1.56\\le y-' + letters[51] + '\\le1.83\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.16', latex: 'y=' + letters[51] + '+1.56\\left\\{0.23\\le x-' + letters[50] + '\\le0.5\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.17', latex: 'x=' + letters[50] + '+0.5\\left\\{1.1\\le y-' + letters[51] + '\\le1.56\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.18', latex: 'y=' + letters[51] + '+1.1\\left\\{0.24\\le x-' + letters[50] + '\\le0.5\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.19', latex: 'y=-\\frac{4459}{1500}\\left(x-' + letters[50] + '-0.24\\right)+' + letters[51] + '+1.1\\left\\{0.24\\le x-' + letters[50] + '\\le0.3\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.20', latex: 'y=-0.4\\left(x-' + letters[50] + '-0.77\\right)^{2}+' + letters[51] + '+1.01\\left\\{\\left(x-' + letters[50] + '-0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\ge0.64\\right\\}\\left\\{0.3\\le x-' + letters[50] + '\\le0.77\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.21', latex: 'y=-0.4\\left(x-' + letters[50] + '-0.77\\right)^{2}+' + letters[51] + '+1.01\\left\\{\\left(x-' + letters[50] + '-0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\le0.64\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.22', latex: '\\left(x-' + letters[50] + '-0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}=0.64\\left\\{0.24\\le y-' + letters[51] + '\\le-0.4\\left(x-' + letters[50] + '-0.77\\right)^{2}+1.01\\right\\}\\left\\{0.77\\le x-' + letters[50] + '\\le-0.6\\left(y-' + letters[51] + '-0.24\\right)^{2}+1.54\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.23', latex: 'x=-0.6\\left(y-' + letters[51] + '-0.24\\right)^{2}+' + letters[50] + '+1.54\\left\\{\\left(x-' + letters[50] + '-0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\le0.64\\right\\}\\left\\{y\\ge ' + letters[51] + '-0.09\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.24', latex: 'y=1.17\\left(x-' + letters[50] + '-1.47466\\right)+' + letters[51] + '-0.09\\left\\{\\frac{1296}{1089}\\left(x-' + letters[50] + '-0.83\\right)^{2}+\\left(y-' + letters[51] + '+1.14\\right)^{2}\\ge0.1296\\right\\}\\left\\{-1.09\\le y-' + letters[51] + '\\le-0.09\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.25', latex: '\\frac{1296}{1089}\\left(x-' + letters[50] + '-0.83\\right)^{2}+\\left(y-' + letters[51] + '+1.14\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[50] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[51] + '-1.14\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.26', latex: 'x=' + letters[50] + '+1.16\\left\\{-1.45\\le y-' + letters[51] + '\\le-1.14\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.27', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[50] + '\\right)^{2}+' + letters[51] + '-0.73\\left\\{-0.83\\le x-' + letters[50] + '\\le0.83\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.28', latex: 'x=' + letters[50] + '-0.29\\left\\{-0.31\\le y-' + letters[51] + '\\le0.31\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.29', latex: 'y=-\\frac{325}{289}\\left(x-' + letters[50] + '+0.63\\right)^{2}+' + letters[51] + '+0.44\\left\\{-0.63\\le x-' + letters[50] + '\\le-0.29\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.30', latex: 'y=-\\frac{78125}{45796}\\left(x-' + letters[50] + '+0.63\\right)^{2}+' + letters[51] + '+0.44\\left\\{-0.8012\\le x-' + letters[50] + '\\le-0.63\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.31', latex: 'x=3.078125\\left(y-' + letters[51] + '-0.23\\right)^{2}+' + letters[50] + '-0.88\\left\\{0.23\\le y-' + letters[51] + '\\le0.39\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.32', latex: 'x=\\frac{75}{49}\\left(y-' + letters[51] + '-0.23\\right)^{2}+' + letters[50] + '-0.88\\left\\{0.09\\le y-' + letters[51] + '\\le0.23\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.33', latex: 'y=-\\frac{80}{69}\\left(x-' + letters[50] + '+0.505\\right)+' + letters[51] + '-0.31\\left\\{-0.85\\le x-' + letters[50] + '\\le-0.505\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.34', latex: 'y=' + letters[51] + '-0.31\\left\\{-0.505\\le x-' + letters[50] + '\\le-0.29\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.35', latex: 'x=' + letters[50] + '+0.29\\left\\{-0.31\\le y-' + letters[51] + '\\le0.31\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.36', latex: 'y=-\\frac{325}{289}\\left(x-' + letters[50] + '-0.63\\right)^{2}+' + letters[51] + '+0.44\\left\\{0.29\\le x-' + letters[50] + '\\le0.63\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.37', latex: 'y=-\\frac{78125}{45796}\\left(x-' + letters[50] + '-0.63\\right)^{2}+' + letters[51] + '+0.44\\left\\{0.63\\le x-' + letters[50] + '\\le0.8012\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.38', latex: 'x=-3.078125\\left(y-' + letters[51] + '-0.23\\right)^{2}+' + letters[50] + '+0.88\\left\\{0.23\\le y-' + letters[51] + '\\le0.39\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.39', latex: 'x=-\\frac{75}{49}\\left(y-' + letters[51] + '-0.23\\right)^{2}+' + letters[50] + '+0.88\\left\\{0.09\\le y-' + letters[51] + '\\le0.23\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.40', latex: 'y=\\frac{80}{69}\\left(x-' + letters[50] + '-0.505\\right)+' + letters[51] + '-0.31\\left\\{0.505\\le x-' + letters[50] + '\\le0.85\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.41', latex: 'y=' + letters[51] + '-0.31\\left\\{0.29\\le x-' + letters[50] + '\\le0.505\\right\\}', color: '#000000'})
-                calculator.setExpression({id: 'bK1.xy', latex: '\\left(' + letters[50] + ',' + letters[51] + '\\right)', color: '#000000'})
-                calculator.setExpression({id: 'bK1.x', latex: letters[50] + '=2.01', sliderBounds: {min: '-13.99', max: '14.01', step: '4'}})
-                calculator.setExpression({id: 'bK1.y', latex: letters[51] + '=13.84', sliderBounds: {min: '-14.16', max: '13.84', step: '4'}})
-                }
-                // White knights
-                for (i = 0; i < 2; i++) {
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.1', latex: 'y=' + letters[2*i+53] + '-1.11\\left\\{-1.15\\le x-' + letters[2*i+52] + '\\le1.15\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.2', latex: 'x=' + letters[2*i+52] + '-1.15\\left\\{-1.11\\le y-' + letters[2*i+53] + '\\le-0.8\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+52] + '+0.82\\right)^{2}+\\left(y-' + letters[2*i+53] + '+0.8\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2*i+52] + '-0.82\\right\\}\\left\\{y\\ge ' + letters[2*i+53] + '-0.8\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.4', latex: 'y=-\\frac{500}{6724}\\left(x-' + letters[2*i+52] + '\\right)^{2}+' + letters[2*i+53] + '-0.39\\left\\{-0.82\\le x-' + letters[2*i+52] + '\\le0.82\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.5', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+52] + '-0.82\\right)^{2}+\\left(y-' + letters[2*i+53] + '+0.8\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2*i+52] + '+0.82\\right\\}\\left\\{y\\ge ' + letters[2*i+53] + '-0.8\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.6', latex: 'x=' + letters[2*i+52] + '+1.15\\left\\{-1.11\\le y-' + letters[2*i+53] + '\\le-0.8\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.7', latex: 'x=' + letters[2*i+52] + '-0.85\\left\\{\\frac{1296}{1089}\\left(x-' + letters[2*i+52] + '+0.82\\right)^{2}+\\left(y-' + letters[2*i+53] + '+0.8\\right)^{2}\\ge0.1296\\right\\}\\left\\{-0.5\\le y-' + letters[2*i+53] + '\\le-0.42\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.8', latex: 'x=0.98\\left(y-' + letters[2*i+53] + '+0.42\\right)^{1.7}+' + letters[2*i+52] + '-0.85\\left\\{-\\frac{300}{121}\\left(y-' + letters[2*i+53] + '-0.55\\right)^{2}-0.13\\le x-' + letters[2*i+52] + '\\le-0.32\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.9', latex: 'x=0.98\\left(y-' + letters[2*i+53] + '+0.42\\right)^{1.7}+' + letters[2*i+52] + '-0.85\\left\\{x\\le-\\frac{300}{121}\\left(y-' + letters[2*i+53] + '-0.55\\right)^{2}+' + letters[2*i+52] + '-0.13\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.10', latex: 'x=-\\frac{300}{121}\\left(y-' + letters[2*i+53] + '-0.55\\right)^{2}+' + letters[2*i+52] + '-0.13\\left\\{x\\le0.98\\left(y-' + letters[2*i+53] + '+0.42\\right)^{1.7}+' + letters[2*i+52] + '-0.85\\right\\}\\left\\{0.3\\le y-' + letters[2*i+53] + '\\le0.66\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.11', latex: 'y=\\frac{0.28}{0.46^{2.3}}\\left(x-' + letters[2*i+52] + '+0.62\\right)^{2.3}+' + letters[2*i+53] + '+0.38\\left\\{x\\le ' + letters[2*i+52] + '-0.16\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.12', latex: 'y=-\\frac{0.27}{0.32^{2.3}}\\left(-x+' + letters[2*i+52] + '-0.62\\right)^{2.3}+' + letters[2*i+53] + '+0.38\\left\\{x\\ge ' + letters[2*i+52] + '-0.94\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.13', latex: 'y=' + letters[2*i+53] + '+0.11\\left\\{-1.1\\le x-' + letters[2*i+52] + '\\le-0.94\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.14', latex: 'x=-\\frac{395000}{35937}\\left(y-' + letters[2*i+53] + '-0.44\\right)^{3}+' + letters[2*i+52] + '-1.495\\left\\{0.11\\le y-' + letters[2*i+53] + '\\le0.44\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.15', latex: 'x=\\frac{395000}{35937}\\left(y-' + letters[2*i+53] + '-0.44\\right)^{3}+' + letters[2*i+52] + '-1.495\\left\\{y\\le1.44\\left(x-' + letters[2*i+52] + '+1.12\\right)+' + letters[2*i+53] + '+1.07\\right\\}\\left\\{0.44\\le y-' + letters[2*i+53] + '\\le0.6\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.16', latex: 'y=1.44\\left(x-' + letters[2*i+52] + '+1.12\\right)+' + letters[2*i+53] + '+1.07\\left\\{-1.49\\le x-' + letters[2*i+52] + '\\ge\\frac{395000}{35937}\\left(y-' + letters[2*i+53] + '-0.44\\right)^{3}-1.495\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.17', latex: 'y=1.44\\left(x-' + letters[2*i+52] + '+1.12\\right)+' + letters[2*i+53] + '+1.07\\left\\{-1.47\\le x-' + letters[2*i+52] + '\\le\\frac{395000}{35937}\\left(y-' + letters[2*i+53] + '-0.44\\right)^{3}-1.495\\right\\}\\left\\{x\\le ' + letters[2*i+52] + '-1.12\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.18', latex: 'y=\\frac{0.47}{0.2^{1.4}}\\left(x-' + letters[2*i+52] + '+0.92\\right)^{1.4}+' + letters[2*i+53] + '+1.54\\left\\{-1.12\\le x-' + letters[2*i+52] + '\\le-0.92\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.19', latex: 'y=x-' + letters[2*i+52] + '+' + letters[2*i+53] + '+2.46\\left\\{\\frac{169}{49}\\left(x-' + letters[2*i+52] + '+0.56\\right)^{2}+\\left(y-' + letters[2*i+53] + '-1.8\\right)^{2}\\ge0.0676\\right\\}\\left\\{-0.92\\le x-' + letters[2*i+52] + '\\le-0.52\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.20', latex: '\\frac{169}{49}\\left(x-' + letters[2*i+52] + '+0.56\\right)^{2}+\\left(y-' + letters[2*i+53] + '-1.8\\right)^{2}=0.0676\\left\\{x\\le ' + letters[2*i+52] + '-0.56\\right\\}\\left\\{y\\ge x-' + letters[2*i+52] + '+' + letters[2*i+53] + '+2.46\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.21', latex: 'y=' + letters[2*i+53] + '+2.06\\left\\{-0.56\\le x-' + letters[2*i+52] + '\\le-0.48\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.22', latex: 'y=-\\frac{29}{28}\\left(x-' + letters[2*i+52] + '+0.48\\right)+' + letters[2*i+53] + '+2.06\\left\\{-0.48\\le x-' + letters[2*i+52] + '\\le-0.2\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.23', latex: 'y=' + letters[2*i+53] + '+1.77\\left\\{-0.2\\le x-' + letters[2*i+52] + '\\le-0.12\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.24', latex: 'y=-0.65\\left(x-' + letters[2*i+52] + '+0.12\\right)^{2}+' + letters[2*i+53] + '+1.77\\left\\{\\frac{5041}{3364}\\left(x-' + letters[2*i+52] + '+0.12\\right)^{2}+\\left(y-' + letters[2*i+53] + '-0.35\\right)^{2}\\le2.0164\\right\\}\\left\\{x\\ge ' + letters[2*i+52] + '-0.12\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.25', latex: '\\frac{5041}{3364}\\left(x-' + letters[2*i+52] + '+0.12\\right)^{2}+\\left(y-' + letters[2*i+53] + '-0.35\\right)^{2}=2.0164\\left\\{0.35\\le y-' + letters[2*i+53] + '\\le-0.65\\left(x-' + letters[2*i+52] + '+0.12\\right)^{2}+1.77\\right\\}\\left\\{x\\ge ' + letters[2*i+52] + '-0.12\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.26', latex: 'x=-0.28\\left(y-' + letters[2*i+53] + '-0.35\\right)^{2}+' + letters[2*i+52] + '+1.04\\left\\{\\frac{1296}{1089}\\left(x-' + letters[2*i+52] + '-0.82\\right)^{2}+\\left(y-' + letters[2*i+53] + '+0.8\\right)^{2}\\ge0.1296\\right\\}\\left\\{-0.5\\le y-' + letters[2*i+53] + '\\le0.35\\right\\}', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.27', latex: 'y=-\\frac{800}{147}\\left(x-' + letters[2*i+52] + '+0.505\\right)^{2}+' + letters[2*i+53] + '+1.37\\left\\{-0.505\\le x-' + letters[2*i+52] + '\\le-0.4\\right\\}', lineWidth: '1', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.28', latex: 'y=-\\frac{6800}{1089}\\left(x-' + letters[2*i+52] + '+0.505\\right)^{2}+' + letters[2*i+53] + '+1.37\\left\\{-\\frac{12000000}{2401}\\left(y-' + letters[2*i+53] + '-1.27\\right)^{4}-0.4\\le x-' + letters[2*i+52] + '\\le-0.505\\right\\}\\left\\{y\\ge ' + letters[2*i+53] + '+1.3\\right\\}', lineWidth: '1', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.29', latex: 'y=-\\frac{6800}{1089}\\left(x-' + letters[2*i+52] + '+0.505\\right)^{2}+' + letters[2*i+53] + '+1.37\\left\\{x\\le-\\frac{12000000}{2401}\\left(y-' + letters[2*i+53] + '-1.27\\right)^{4}+' + letters[2*i+52] + '-0.4\\right\\}', lineWidth: '1', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.30', latex: 'x=-\\frac{12000000}{2401}\\left(y-' + letters[2*i+53] + '-1.27\\right)^{4}+' + letters[2*i+52] + '-0.4\\left\\{y\\le-\\frac{6800}{1089}\\left(x-' + letters[2*i+52] + '+0.505\\right)^{2}+' + letters[2*i+53] + '+1.37\\right\\}\\left\\{y\\le ' + letters[2*i+53] + '+1.27\\right\\}', lineWidth: '1', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.31', latex: 'x=' + letters[2*i+52] + '-0.4\\left\\{1.27\\le y-' + letters[2*i+53] + '\\le1.31\\right\\}', lineWidth: '1', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.32', latex: '\\left(' + letters[2*i+52] + '-0.52,' + letters[2*i+53] + '+1.28\\right)', pointSize: '2', dragMode: 'NONE', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.xy', latex: '\\left(' + letters[2*i+52] + ',' + letters[2*i+53] + '\\right)', color: '#BA8C63'})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.x', latex: letters[2*i+52] + '=' + (20*i-9.88).toString(), sliderBounds: {min: '-13.88', max: '14.12', step: '4'}})
-                    calculator.setExpression({hidden: false, id: 'wN'+(i+1).toString()+'.y', latex: letters[2*i+53] + '=-14.5', sliderBounds: {min: '-14.5', max: '13.5', step: '4'}})
-                }
-                // Black knights
-                for (i = 2; i < 4; i++) {
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.1', latex: 'y=' + letters[2*i+53] + '-1.11\\left\\{-1.15\\le x-' + letters[2*i+52] + '\\le1.15\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.2', latex: 'x=' + letters[2*i+52] + '-1.15\\left\\{-1.11\\le y-' + letters[2*i+53] + '\\le-0.8\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+52] + '+0.82\\right)^{2}+\\left(y-' + letters[2*i+53] + '+0.8\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2*i+52] + '-0.82\\right\\}\\left\\{y\\ge ' + letters[2*i+53] + '-0.8\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.4', latex: 'y=-\\frac{500}{6724}\\left(x-' + letters[2*i+52] + '\\right)^{2}+' + letters[2*i+53] + '-0.39\\left\\{-0.82\\le x-' + letters[2*i+52] + '\\le0.82\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.5', latex: '\\frac{1296}{1089}\\left(x-' + letters[2*i+52] + '-0.82\\right)^{2}+\\left(y-' + letters[2*i+53] + '+0.8\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2*i+52] + '+0.82\\right\\}\\left\\{y\\ge ' + letters[2*i+53] + '-0.8\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.6', latex: 'x=' + letters[2*i+52] + '+1.15\\left\\{-1.11\\le y-' + letters[2*i+53] + '\\le-0.8\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.7', latex: 'x=' + letters[2*i+52] + '-0.85\\left\\{\\frac{1296}{1089}\\left(x-' + letters[2*i+52] + '+0.82\\right)^{2}+\\left(y-' + letters[2*i+53] + '+0.8\\right)^{2}\\ge0.1296\\right\\}\\left\\{-0.5\\le y-' + letters[2*i+53] + '\\le-0.42\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.8', latex: 'x=0.98\\left(y-' + letters[2*i+53] + '+0.42\\right)^{1.7}+' + letters[2*i+52] + '-0.85\\left\\{-\\frac{300}{121}\\left(y-' + letters[2*i+53] + '-0.55\\right)^{2}-0.13\\le x-' + letters[2*i+52] + '\\le-0.32\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.9', latex: 'x=0.98\\left(y-' + letters[2*i+53] + '+0.42\\right)^{1.7}+' + letters[2*i+52] + '-0.85\\left\\{x\\le-\\frac{300}{121}\\left(y-' + letters[2*i+53] + '-0.55\\right)^{2}+' + letters[2*i+52] + '-0.13\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.10', latex: 'x=-\\frac{300}{121}\\left(y-' + letters[2*i+53] + '-0.55\\right)^{2}+' + letters[2*i+52] + '-0.13\\left\\{x\\le0.98\\left(y-' + letters[2*i+53] + '+0.42\\right)^{1.7}+' + letters[2*i+52] + '-0.85\\right\\}\\left\\{0.3\\le y-' + letters[2*i+53] + '\\le0.66\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.11', latex: 'y=\\frac{0.28}{0.46^{2.3}}\\left(x-' + letters[2*i+52] + '+0.62\\right)^{2.3}+' + letters[2*i+53] + '+0.38\\left\\{x\\le ' + letters[2*i+52] + '-0.16\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.12', latex: 'y=-\\frac{0.27}{0.32^{2.3}}\\left(-x+' + letters[2*i+52] + '-0.62\\right)^{2.3}+' + letters[2*i+53] + '+0.38\\left\\{x\\ge ' + letters[2*i+52] + '-0.94\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.13', latex: 'y=' + letters[2*i+53] + '+0.11\\left\\{-1.1\\le x-' + letters[2*i+52] + '\\le-0.94\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.14', latex: 'x=-\\frac{395000}{35937}\\left(y-' + letters[2*i+53] + '-0.44\\right)^{3}+' + letters[2*i+52] + '-1.495\\left\\{0.11\\le y-' + letters[2*i+53] + '\\le0.44\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.15', latex: 'x=\\frac{395000}{35937}\\left(y-' + letters[2*i+53] + '-0.44\\right)^{3}+' + letters[2*i+52] + '-1.495\\left\\{y\\le1.44\\left(x-' + letters[2*i+52] + '+1.12\\right)+' + letters[2*i+53] + '+1.07\\right\\}\\left\\{0.44\\le y-' + letters[2*i+53] + '\\le0.6\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.16', latex: 'y=1.44\\left(x-' + letters[2*i+52] + '+1.12\\right)+' + letters[2*i+53] + '+1.07\\left\\{-1.49\\le x-' + letters[2*i+52] + '\\ge\\frac{395000}{35937}\\left(y-' + letters[2*i+53] + '-0.44\\right)^{3}-1.495\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.17', latex: 'y=1.44\\left(x-' + letters[2*i+52] + '+1.12\\right)+' + letters[2*i+53] + '+1.07\\left\\{-1.47\\le x-' + letters[2*i+52] + '\\le\\frac{395000}{35937}\\left(y-' + letters[2*i+53] + '-0.44\\right)^{3}-1.495\\right\\}\\left\\{x\\le ' + letters[2*i+52] + '-1.12\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.18', latex: 'y=\\frac{0.47}{0.2^{1.4}}\\left(x-' + letters[2*i+52] + '+0.92\\right)^{1.4}+' + letters[2*i+53] + '+1.54\\left\\{-1.12\\le x-' + letters[2*i+52] + '\\le-0.92\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.19', latex: 'y=x-' + letters[2*i+52] + '+' + letters[2*i+53] + '+2.46\\left\\{\\frac{169}{49}\\left(x-' + letters[2*i+52] + '+0.56\\right)^{2}+\\left(y-' + letters[2*i+53] + '-1.8\\right)^{2}\\ge0.0676\\right\\}\\left\\{-0.92\\le x-' + letters[2*i+52] + '\\le-0.52\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.20', latex: '\\frac{169}{49}\\left(x-' + letters[2*i+52] + '+0.56\\right)^{2}+\\left(y-' + letters[2*i+53] + '-1.8\\right)^{2}=0.0676\\left\\{x\\le ' + letters[2*i+52] + '-0.56\\right\\}\\left\\{y\\ge x-' + letters[2*i+52] + '+' + letters[2*i+53] + '+2.46\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.21', latex: 'y=' + letters[2*i+53] + '+2.06\\left\\{-0.56\\le x-' + letters[2*i+52] + '\\le-0.48\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.22', latex: 'y=-\\frac{29}{28}\\left(x-' + letters[2*i+52] + '+0.48\\right)+' + letters[2*i+53] + '+2.06\\left\\{-0.48\\le x-' + letters[2*i+52] + '\\le-0.2\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.23', latex: 'y=' + letters[2*i+53] + '+1.77\\left\\{-0.2\\le x-' + letters[2*i+52] + '\\le-0.12\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.24', latex: 'y=-0.65\\left(x-' + letters[2*i+52] + '+0.12\\right)^{2}+' + letters[2*i+53] + '+1.77\\left\\{\\frac{5041}{3364}\\left(x-' + letters[2*i+52] + '+0.12\\right)^{2}+\\left(y-' + letters[2*i+53] + '-0.35\\right)^{2}\\le2.0164\\right\\}\\left\\{x\\ge ' + letters[2*i+52] + '-0.12\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.25', latex: '\\frac{5041}{3364}\\left(x-' + letters[2*i+52] + '+0.12\\right)^{2}+\\left(y-' + letters[2*i+53] + '-0.35\\right)^{2}=2.0164\\left\\{0.35\\le y-' + letters[2*i+53] + '\\le-0.65\\left(x-' + letters[2*i+52] + '+0.12\\right)^{2}+1.77\\right\\}\\left\\{x\\ge ' + letters[2*i+52] + '-0.12\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.26', latex: 'x=-0.28\\left(y-' + letters[2*i+53] + '-0.35\\right)^{2}+' + letters[2*i+52] + '+1.04\\left\\{\\frac{1296}{1089}\\left(x-' + letters[2*i+52] + '-0.82\\right)^{2}+\\left(y-' + letters[2*i+53] + '+0.8\\right)^{2}\\ge0.1296\\right\\}\\left\\{-0.5\\le y-' + letters[2*i+53] + '\\le0.35\\right\\}', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.27', latex: 'y=-\\frac{800}{147}\\left(x-' + letters[2*i+52] + '+0.505\\right)^{2}+' + letters[2*i+53] + '+1.37\\left\\{-0.505\\le x-' + letters[2*i+52] + '\\le-0.4\\right\\}', lineWidth: '1', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.28', latex: 'y=-\\frac{6800}{1089}\\left(x-' + letters[2*i+52] + '+0.505\\right)^{2}+' + letters[2*i+53] + '+1.37\\left\\{-\\frac{12000000}{2401}\\left(y-' + letters[2*i+53] + '-1.27\\right)^{4}-0.4\\le x-' + letters[2*i+52] + '\\le-0.505\\right\\}\\left\\{y\\ge ' + letters[2*i+53] + '+1.3\\right\\}', lineWidth: '1', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.29', latex: 'y=-\\frac{6800}{1089}\\left(x-' + letters[2*i+52] + '+0.505\\right)^{2}+' + letters[2*i+53] + '+1.37\\left\\{x\\le-\\frac{12000000}{2401}\\left(y-' + letters[2*i+53] + '-1.27\\right)^{4}+' + letters[2*i+52] + '-0.4\\right\\}', lineWidth: '1', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.30', latex: 'x=-\\frac{12000000}{2401}\\left(y-' + letters[2*i+53] + '-1.27\\right)^{4}+' + letters[2*i+52] + '-0.4\\left\\{y\\le-\\frac{6800}{1089}\\left(x-' + letters[2*i+52] + '+0.505\\right)^{2}+' + letters[2*i+53] + '+1.37\\right\\}\\left\\{y\\le ' + letters[2*i+53] + '+1.27\\right\\}', lineWidth: '1', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.31', latex: 'x=' + letters[2*i+52] + '-0.4\\left\\{1.27\\le y-' + letters[2*i+53] + '\\le1.31\\right\\}', lineWidth: '1', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.32', latex: '\\left(' + letters[2*i+52] + '-0.52,' + letters[2*i+53] + '+1.28\\right)', pointSize: '2', dragMode: 'NONE', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.xy', latex: '\\left(' + letters[2*i+52] + ',' + letters[2*i+53] + '\\right)', color: '#000000'})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.x', latex: letters[2*i+52] + '=' + (20*(i-2)-9.88).toString(), sliderBounds: {min: '-13.88', max: '14.12', step: '4'}})
-                    calculator.setExpression({hidden: false, id: 'bN'+(i-1).toString()+'.y', latex: letters[2*i+53] + '=13.5', sliderBounds: {min: '-14.5', max: '13.5', step: '4'}})
-                }
-                // White queen
-                makeQueen('w', 1, 4, 1);
-                // Black queen
-                makeQueen('b', 1, 4, 8);
-                document.getElementById('thinking').innerHTML = '';
-                document.getElementById('status').innerHTML = '';
-                document.getElementById('moves_log').innerHTML = 'Moves: ';
-                document.getElementById('game_over').style.display = 'none';
-            })})
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    // Board
+                    for (i = 0; i < 9; i++) {
+                        calculator.setExpression({ id: 'board' + (i + 1).toString(), latex: 'y=' + (16 - 4 * i).toString() + '\\left\\{-16\\le x\\le16\\right\\}', color: '#000000' });
+                    }
+                    for (i = 0; i < 9; i++) {
+                        calculator.setExpression({ id: 'board' + (i + 10).toString(), latex: 'x=' + (16 - 4 * i).toString() + '\\left\\{-16\\le y\\le16\\right\\}', color: '#000000' });
+                    }
+                    for (i = 0; i < 4; i++) {
+                        calculator.setExpression({ id: 'shading' + (i * 8 + 1).toString(), latex: '-12\\le x\\le-8\\left\\{' + (12 - 8 * i).toString() + '\\le y\\le' + (16 - 8 * i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000' });
+                        calculator.setExpression({ id: 'shading' + (i * 8 + 2).toString(), latex: '-4\\le x\\le0\\left\\{' + (12 - 8 * i).toString() + '\\le y\\le' + (16 - 8 * i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000' });
+                        calculator.setExpression({ id: 'shading' + (i * 8 + 3).toString(), latex: '4\\le x\\le8\\left\\{' + (12 - 8 * i).toString() + '\\le y\\le' + (16 - 8 * i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000' });
+                        calculator.setExpression({ id: 'shading' + (i * 8 + 4).toString(), latex: '12\\le x\\le16\\left\\{' + (12 - 8 * i).toString() + '\\le y\\le' + (16 - 8 * i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000' });
+                        calculator.setExpression({ id: 'shading' + (i * 8 + 5).toString(), latex: '-16\\le x\\le-12\\left\\{' + (8 - 8 * i).toString() + '\\le y\\le' + (12 - 8 * i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000' });
+                        calculator.setExpression({ id: 'shading' + (i * 8 + 6).toString(), latex: '-8\\le x\\le-4\\left\\{' + (8 - 8 * i).toString() + '\\le y\\le' + (12 - 8 * i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000' });
+                        calculator.setExpression({ id: 'shading' + (i * 8 + 7).toString(), latex: '0\\le x\\le4\\left\\{' + (8 - 8 * i).toString() + '\\le y\\le' + (12 - 8 * i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000' });
+                        calculator.setExpression({ id: 'shading' + (i * 8 + 8).toString(), latex: '8\\le x\\le12\\left\\{' + (8 - 8 * i).toString() + '\\le y\\le' + (12 - 8 * i).toString() + '\\right\\}', fillOpacity: '0.15', color: '#000000' });
+                    }
+                    // White pawns
+                    for (i = 0; i < 8; i++) {
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.1', latex: 'y=-2.17+' + letters[2 * i + 1] + '\\left\\{-1.06+' + letters[2 * i] + '\\le x\\le1.06+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.2', latex: '\\left(x+0.8-' + letters[2 * i] + '\\right)^{2}+\\frac{0.0676}{0.4489}\\left(y+2.17-' + letters[2 * i + 1] + '\\right)^{2}=0.0676\\left\\{y\\ge-2.17+' + letters[2 * i + 1] + '\\right\\}\\left\\{x\\le-1+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.3', latex: 'y=\\frac{67\\sqrt{69}-1001}{208}\\left(x+0.6-' + letters[2 * i] + '\\right)^{2}-1.4+' + letters[2 * i + 1] + '\\left\\{-1+' + letters[2 * i] + '\\le x\\le-0.7+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.4', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.722}\\left(x+0.7-' + letters[2 * i] + '\\right)+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2 * i + 1] + '\\left\\{-0.7+' + letters[2 * i] + '\\le x\\le-0.5+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.5', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.1444}\\left(x+0.7-' + letters[2 * i] + '\\right)^{2}+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2 * i + 1] + '\\left\\{-0.5+' + letters[2 * i] + '\\le x\\le-0.32+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.6', latex: 'y=-0.85+' + letters[2 * i + 1] + '\\left\\{-0.56+' + letters[2 * i] + '\\le x\\le-0.32+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.7', latex: 'x=\\frac{200}{121}\\left(y+0.63-' + letters[2 * i + 1] + '\\right)^{2}-0.64+' + letters[2 * i] + '\\left\\{-0.85+' + letters[2 * i + 1] + '\\le y\\le-0.56+' + letters[2 * i + 1] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.8', latex: 'y=\\frac{1936}{2927}\\left(x-\\frac{2807591}{193600}-' + letters[2 * i] + '\\right)+9.45+' + letters[2 * i + 1] + '\\left\\{-0.56+' + letters[2 * i + 1] + '\\le y\\le-0.4+' + letters[2 * i + 1] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.9', latex: '\\left(x-' + letters[2 * i] + '\\right)^{2}+\\left(y-' + letters[2 * i + 1] + '\\right)^{2}=0.3121\\left\\{y\\ge ' + letters[2 * i + 1] + '-0.4\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.10', latex: 'y=-\\frac{1936}{2927}\\left(x+\\frac{2807591}{193600}-' + letters[2 * i] + '\\right)+9.45+' + letters[2 * i + 1] + '\\left\\{-0.56+' + letters[2 * i + 1] + '\\le y\\le-0.4+' + letters[2 * i + 1] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.11', latex: 'x=-\\frac{200}{121}\\left(y+0.63-' + letters[2 * i + 1] + '\\right)^{2}+0.64+' + letters[2 * i] + '\\left\\{-0.85+' + letters[2 * i + 1] + '\\le y\\le-0.56+' + letters[2 * i + 1] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.12', latex: 'y=-0.85+' + letters[2 * i + 1] + '\\left\\{0.32+' + letters[2 * i] + '\\le x\\le0.56+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.13', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.1444}\\left(x-0.7-' + letters[2 * i] + '\\right)^{2}+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2 * i + 1] + '\\left\\{0.32+' + letters[2 * i] + '\\le x\\le0.5+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.14', latex: 'y=-\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.722}\\left(x-0.7-' + letters[2 * i] + '\\right)+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2 * i + 1] + '\\left\\{0.5+' + letters[2 * i] + '\\le x\\le0.7+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.15', latex: 'y=\\frac{67\\sqrt{69}-1001}{208}\\left(x-0.6-' + letters[2 * i] + '\\right)^{2}-1.4+' + letters[2 * i + 1] + '\\left\\{0.7+' + letters[2 * i] + '\\le x\\le1+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.16', latex: '\\left(x-0.8-' + letters[2 * i] + '\\right)^{2}+\\frac{0.0676}{0.4489}\\left(y+2.17-' + letters[2 * i + 1] + '\\right)^{2}=0.0676\\left\\{y\\ge-2.17+' + letters[2 * i + 1] + '\\right\\}\\left\\{x\\ge1+' + letters[2 * i] + '\\right\\}', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.xy', latex: '\\left(' + letters[2 * i] + ', ' + letters[2 * i + 1] + '\\right)', color: '#BA8C63' });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.x', latex: letters[2 * i] + '=' + (4 * i - 14).toString(), sliderBounds: { min: '-14', max: '14', step: '4' } });
+                        calculator.setExpression({ hidden: false, id: 'wP' + (i + 1).toString() + '.y', latex: letters[2 * i + 1] + '=-9.45', sliderBounds: { min: '-13.45', max: '14.55', step: '4' } });
+                    }
+                    // Black pawns
+                    for (i = 8; i < 16; i++) {
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.1', latex: 'y=-2.17+' + letters[2 * i + 1] + '\\left\\{-1.06+' + letters[2 * i] + '\\le x\\le1.06+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.2', latex: '\\left(x+0.8-' + letters[2 * i] + '\\right)^{2}+\\frac{0.0676}{0.4489}\\left(y+2.17-' + letters[2 * i + 1] + '\\right)^{2}=0.0676\\left\\{y\\ge-2.17+' + letters[2 * i + 1] + '\\right\\}\\left\\{x\\le-1+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.3', latex: 'y=\\frac{67\\sqrt{69}-1001}{208}\\left(x+0.6-' + letters[2 * i] + '\\right)^{2}-1.4+' + letters[2 * i + 1] + '\\left\\{-1+' + letters[2 * i] + '\\le x\\le-0.7+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.4', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.722}\\left(x+0.7-' + letters[2 * i] + '\\right)+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2 * i + 1] + '\\left\\{-0.7+' + letters[2 * i] + '\\le x\\le-0.5+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.5', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.1444}\\left(x+0.7-' + letters[2 * i] + '\\right)^{2}+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2 * i + 1] + '\\left\\{-0.5+' + letters[2 * i] + '\\le x\\le-0.32+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.6', latex: 'y=-0.85+' + letters[2 * i + 1] + '\\left\\{-0.56+' + letters[2 * i] + '\\le x\\le-0.32+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.7', latex: 'x=\\frac{200}{121}\\left(y+0.63-' + letters[2 * i + 1] + '\\right)^{2}-0.64+' + letters[2 * i] + '\\left\\{-0.85+' + letters[2 * i + 1] + '\\le y\\le-0.56+' + letters[2 * i + 1] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.8', latex: 'y=\\frac{1936}{2927}\\left(x-\\frac{2807591}{193600}-' + letters[2 * i] + '\\right)+9.45+' + letters[2 * i + 1] + '\\left\\{-0.56+' + letters[2 * i + 1] + '\\le y\\le-0.4+' + letters[2 * i + 1] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.9', latex: '\\left(x-' + letters[2 * i] + '\\right)^{2}+\\left(y-' + letters[2 * i + 1] + '\\right)^{2}=0.3121\\left\\{y\\ge ' + letters[2 * i + 1] + '-0.4\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.10', latex: 'y=-\\frac{1936}{2927}\\left(x+\\frac{2807591}{193600}-' + letters[2 * i] + '\\right)+9.45+' + letters[2 * i + 1] + '\\left\\{-0.56+' + letters[2 * i + 1] + '\\le y\\le-0.4+' + letters[2 * i + 1] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.11', latex: 'x=-\\frac{200}{121}\\left(y+0.63-' + letters[2 * i + 1] + '\\right)^{2}+0.64+' + letters[2 * i] + '\\left\\{-0.85+' + letters[2 * i + 1] + '\\le y\\le-0.56+' + letters[2 * i + 1] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.12', latex: 'y=-0.85+' + letters[2 * i + 1] + '\\left\\{0.32+' + letters[2 * i] + '\\le x\\le0.56+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.13', latex: 'y=\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.1444}\\left(x-0.7-' + letters[2 * i] + '\\right)^{2}+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2 * i + 1] + '\\left\\{0.32+' + letters[2 * i] + '\\le x\\le0.5+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.14', latex: 'y=-\\frac{0.55-\\frac{67\\sqrt{69}-1001}{20800}}{0.722}\\left(x-0.7-' + letters[2 * i] + '\\right)+\\frac{67\\sqrt{69}-1001}{20800}-1.4+' + letters[2 * i + 1] + '\\left\\{0.5+' + letters[2 * i] + '\\le x\\le0.7+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.15', latex: 'y=\\frac{67\\sqrt{69}-1001}{208}\\left(x-0.6-' + letters[2 * i] + '\\right)^{2}-1.4+' + letters[2 * i + 1] + '\\left\\{0.7+' + letters[2 * i] + '\\le x\\le1+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.16', latex: '\\left(x-0.8-' + letters[2 * i] + '\\right)^{2}+\\frac{0.0676}{0.4489}\\left(y+2.17-' + letters[2 * i + 1] + '\\right)^{2}=0.0676\\left\\{y\\ge-2.17+' + letters[2 * i + 1] + '\\right\\}\\left\\{x\\ge1+' + letters[2 * i] + '\\right\\}', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.xy', latex: '\\left(' + letters[2 * i] + ', ' + letters[2 * i + 1] + '\\right)', color: '#000000' });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.x', latex: letters[2 * i] + '=' + (4 * (i - 8) - 14).toString(), sliderBounds: { min: '-14', max: '14', step: '4' } });
+                        calculator.setExpression({ hidden: false, id: 'bP' + (i - 7).toString() + '.y', latex: letters[2 * i + 1] + '=10.55', sliderBounds: { min: '-13.45', max: '14.55', step: '4' } });
+                    }
+                    // White rooks
+                    for (i = 0; i < 2; i++) {
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.1', latex: 'y=' + letters[2 * i + 33] + '-2.31\\left\\{-1.16\\le x-' + letters[2 * i + 32] + '\\le1.16\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.2', latex: 'x=' + letters[2 * i + 32] + '-1.16\\left\\{-2.31\\le y-' + letters[2 * i + 33] + '\\le-2\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 32] + '+0.83\\right)^{2}+\\left(y-' + letters[2 * i + 33] + '+2\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2 * i + 32] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[2 * i + 33] + '-2\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.4', latex: 'y=8.4\\left(x-' + letters[2 * i + 32] + '+0.83\\right)+' + letters[2 * i + 33] + '-1.64\\left\\{-0.83\\le x-' + letters[2 * i + 32] + '\\le-0.68\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.5', latex: 'y=\\frac{2800}{729}\\left(x-' + letters[2 * i + 32] + '+0.68\\right)^{2}+' + letters[2 * i + 33] + '-0.38\\left\\{-0.95\\le x-' + letters[2 * i + 32] + '\\le-0.68\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.6', latex: 'y=-\\frac{55}{3}\\left(x-' + letters[2 * i + 32] + '+0.95\\right)+' + letters[2 * i + 33] + '-0.1\\left\\{-0.98\\le x-' + letters[2 * i + 32] + '\\le-0.95\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.7', latex: 'x=\\frac{1075}{36}\\left(y-' + letters[2 * i + 33] + '-0.45\\right)^{2}+' + letters[2 * i + 32] + '-0.98\\left\\{0.45\\le y-' + letters[2 * i + 33] + '\\le0.57\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.8', latex: 'y=-\\frac{37}{9}\\left(x-' + letters[2 * i + 32] + '+0.55\\right)+' + letters[2 * i + 33] + '+0.57\\left\\{-0.55\\le x-' + letters[2 * i + 32] + '\\le-0.46\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.9', latex: 'y=' + letters[2 * i + 33] + '+0.2\\left\\{-0.46\\le x-' + letters[2 * i + 32] + '\\le-0.31\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.10', latex: 'y=\\frac{40}{3}\\left(x-' + letters[2 * i + 32] + '+0.31\\right)+' + letters[2 * i + 33] + '+0.2\\left\\{-0.31\\le x-' + letters[2 * i + 32] + '\\le-0.28\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.11', latex: 'y=-\\frac{25}{98}\\left(x-' + letters[2 * i + 32] + '\\right)^{2}+' + letters[2 * i + 33] + '+0.62\\left\\{-0.28\\le x-' + letters[2 * i + 32] + '\\le0.28\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.12', latex: 'y=-\\frac{40}{3}\\left(x-' + letters[2 * i + 32] + '-0.31\\right)+' + letters[2 * i + 33] + '+0.2\\left\\{0.28\\le x-' + letters[2 * i + 32] + '\\le0.31\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.13', latex: 'y=' + letters[2 * i + 33] + '+0.2\\left\\{0.31\\le x-' + letters[2 * i + 32] + '\\le0.46\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.14', latex: 'y=\\frac{37}{9}\\left(x-' + letters[2 * i + 32] + '-0.55\\right)+' + letters[2 * i + 33] + '+0.57\\left\\{0.46\\le x-' + letters[2 * i + 32] + '\\le0.55\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.15', latex: 'x=-\\frac{1075}{36}\\left(y-' + letters[2 * i + 33] + '-0.45\\right)^{2}+' + letters[2 * i + 32] + '+0.98\\left\\{0.45\\le y-' + letters[2 * i + 33] + '\\le0.57\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.16', latex: 'y=\\frac{55}{3}\\left(x-' + letters[2 * i + 32] + '-0.95\\right)+' + letters[2 * i + 33] + '-0.1\\left\\{0.95\\le x-' + letters[2 * i + 32] + '\\le0.98\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.17', latex: 'y=\\frac{2800}{729}\\left(x-' + letters[2 * i + 32] + '-0.68\\right)^{2}+' + letters[2 * i + 33] + '-0.38\\left\\{0.68\\le x-' + letters[2 * i + 32] + '\\le0.95\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.18', latex: 'y=-8.4\\left(x-' + letters[2 * i + 32] + '-0.83\\right)+' + letters[2 * i + 33] + '-1.64\\left\\{0.68\\le x-' + letters[2 * i + 32] + '\\le0.83\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.19', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 32] + '-0.83\\right)^{2}+\\left(y-' + letters[2 * i + 33] + '+2\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2 * i + 32] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[2 * i + 33] + '-2\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.20', latex: 'x=' + letters[2 * i + 32] + '+1.16\\left\\{-2.31\\le y-' + letters[2 * i + 33] + '\\le-2\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.21', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[2 * i + 32] + '\\right)^{2}+' + letters[2 * i + 33] + '-1.59\\left\\{-0.83\\le x-' + letters[2 * i + 32] + '\\le0.83\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.22', latex: 'y=-\\frac{400}{4623}\\left(x-' + letters[2 * i + 32] + '\\right)^{2}+' + letters[2 * i + 33] + '-0.34\\left\\{-0.68\\le x-' + letters[2 * i + 32] + '\\le0.68\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.xy', latex: '\\left(' + letters[2 * i + 32] + ', ' + letters[2 * i + 33] + '\\right)', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.x', latex: letters[2 * i + 32] + '=' + (28 * i - 14).toString(), sliderBounds: { min: '-14', max: '14', step: '4' } })
+                        calculator.setExpression({ hidden: false, id: 'wR' + (i + 1).toString() + '.y', latex: letters[2 * i + 33] + '=-13.3', sliderBounds: { min: '-13.3', max: '14.7', step: '4' } })
+                    }
+                    // Black rooks
+                    for (i = 2; i < 4; i++) {
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.1', latex: 'y=' + letters[2 * i + 33] + '-2.31\\left\\{-1.16\\le x-' + letters[2 * i + 32] + '\\le1.16\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.2', latex: 'x=' + letters[2 * i + 32] + '-1.16\\left\\{-2.31\\le y-' + letters[2 * i + 33] + '\\le-2\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 32] + '+0.83\\right)^{2}+\\left(y-' + letters[2 * i + 33] + '+2\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2 * i + 32] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[2 * i + 33] + '-2\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.4', latex: 'y=8.4\\left(x-' + letters[2 * i + 32] + '+0.83\\right)+' + letters[2 * i + 33] + '-1.64\\left\\{-0.83\\le x-' + letters[2 * i + 32] + '\\le-0.68\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.5', latex: 'y=\\frac{2800}{729}\\left(x-' + letters[2 * i + 32] + '+0.68\\right)^{2}+' + letters[2 * i + 33] + '-0.38\\left\\{-0.95\\le x-' + letters[2 * i + 32] + '\\le-0.68\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.6', latex: 'y=-\\frac{55}{3}\\left(x-' + letters[2 * i + 32] + '+0.95\\right)+' + letters[2 * i + 33] + '-0.1\\left\\{-0.98\\le x-' + letters[2 * i + 32] + '\\le-0.95\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.7', latex: 'x=\\frac{1075}{36}\\left(y-' + letters[2 * i + 33] + '-0.45\\right)^{2}+' + letters[2 * i + 32] + '-0.98\\left\\{0.45\\le y-' + letters[2 * i + 33] + '\\le0.57\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.8', latex: 'y=-\\frac{37}{9}\\left(x-' + letters[2 * i + 32] + '+0.55\\right)+' + letters[2 * i + 33] + '+0.57\\left\\{-0.55\\le x-' + letters[2 * i + 32] + '\\le-0.46\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.9', latex: 'y=' + letters[2 * i + 33] + '+0.2\\left\\{-0.46\\le x-' + letters[2 * i + 32] + '\\le-0.31\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.10', latex: 'y=\\frac{40}{3}\\left(x-' + letters[2 * i + 32] + '+0.31\\right)+' + letters[2 * i + 33] + '+0.2\\left\\{-0.31\\le x-' + letters[2 * i + 32] + '\\le-0.28\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.11', latex: 'y=-\\frac{25}{98}\\left(x-' + letters[2 * i + 32] + '\\right)^{2}+' + letters[2 * i + 33] + '+0.62\\left\\{-0.28\\le x-' + letters[2 * i + 32] + '\\le0.28\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.12', latex: 'y=-\\frac{40}{3}\\left(x-' + letters[2 * i + 32] + '-0.31\\right)+' + letters[2 * i + 33] + '+0.2\\left\\{0.28\\le x-' + letters[2 * i + 32] + '\\le0.31\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.13', latex: 'y=' + letters[2 * i + 33] + '+0.2\\left\\{0.31\\le x-' + letters[2 * i + 32] + '\\le0.46\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.14', latex: 'y=\\frac{37}{9}\\left(x-' + letters[2 * i + 32] + '-0.55\\right)+' + letters[2 * i + 33] + '+0.57\\left\\{0.46\\le x-' + letters[2 * i + 32] + '\\le0.55\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.15', latex: 'x=-\\frac{1075}{36}\\left(y-' + letters[2 * i + 33] + '-0.45\\right)^{2}+' + letters[2 * i + 32] + '+0.98\\left\\{0.45\\le y-' + letters[2 * i + 33] + '\\le0.57\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.16', latex: 'y=\\frac{55}{3}\\left(x-' + letters[2 * i + 32] + '-0.95\\right)+' + letters[2 * i + 33] + '-0.1\\left\\{0.95\\le x-' + letters[2 * i + 32] + '\\le0.98\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.17', latex: 'y=\\frac{2800}{729}\\left(x-' + letters[2 * i + 32] + '-0.68\\right)^{2}+' + letters[2 * i + 33] + '-0.38\\left\\{0.68\\le x-' + letters[2 * i + 32] + '\\le0.95\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.18', latex: 'y=-8.4\\left(x-' + letters[2 * i + 32] + '-0.83\\right)+' + letters[2 * i + 33] + '-1.64\\left\\{0.68\\le x-' + letters[2 * i + 32] + '\\le0.83\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.19', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 32] + '-0.83\\right)^{2}+\\left(y-' + letters[2 * i + 33] + '+2\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2 * i + 32] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[2 * i + 33] + '-2\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.20', latex: 'x=' + letters[2 * i + 32] + '+1.16\\left\\{-2.31\\le y-' + letters[2 * i + 33] + '\\le-2\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.21', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[2 * i + 32] + '\\right)^{2}+' + letters[2 * i + 33] + '-1.59\\left\\{-0.83\\le x-' + letters[2 * i + 32] + '\\le0.83\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.22', latex: 'y=-\\frac{400}{4623}\\left(x-' + letters[2 * i + 32] + '\\right)^{2}+' + letters[2 * i + 33] + '-0.34\\left\\{-0.68\\le x-' + letters[2 * i + 32] + '\\le0.68\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.xy', latex: '\\left(' + letters[2 * i + 32] + ', ' + letters[2 * i + 33] + '\\right)', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.x', latex: letters[2 * i + 32] + '=' + (28 * (i - 2) - 14).toString(), sliderBounds: { min: '-14', max: '14', step: '4' } })
+                        calculator.setExpression({ hidden: false, id: 'bR' + (i - 1).toString() + '.y', latex: letters[2 * i + 33] + '=14.7', sliderBounds: { min: '-13.3', max: '14.7', step: '4' } })
+                    }
+                    // White bishops
+                    for (i = 0; i < 2; i++) {
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.1', latex: 'y=' + letters[2 * i + 41] + '-1.11\\left\\{-1.16\\le x-' + letters[2 * i + 40] + '\\le1.16\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.2', latex: 'x=' + letters[2 * i + 40] + '-1.16\\left\\{-1.11\\le y-' + letters[2 * i + 41] + '\\le-0.8\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 40] + '+0.83\\right)^{2}+\\left(y-' + letters[2 * i + 41] + '+0.8\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2 * i + 40] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[2 * i + 41] + '-0.8\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.4', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 40] + '-0.83\\right)^{2}+\\left(y-' + letters[2 * i + 41] + '+0.8\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2 * i + 40] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[2 * i + 41] + '-0.8\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.5', latex: 'x=' + letters[2 * i + 40] + '+1.16\\left\\{-1.11\\le y-' + letters[2 * i + 41] + '\\le-0.8\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.6', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[2 * i + 40] + '\\right)^{2}+' + letters[2 * i + 41] + '-0.39\\left\\{-0.83\\le x-' + letters[2 * i + 40] + '\\le0.83\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.7', latex: 'x=0.45\\left(y-' + letters[2 * i + 41] + '-0.42\\right)^{2}+' + letters[2 * i + 40] + '-0.95\\left\\{-\\frac{500}{6889}\\left(x-' + letters[2 * i + 40] + '\\right)^{2}-0.39\\le y-' + letters[2 * i + 41] + '\\le1.64\\right\\}\\left\\{\\left(x-' + letters[2 * i + 40] + '+0.02\\right)^{2}+\\left(y+' + letters[2 * i + 41] + '-1.82\\right)^{2}\\ge0.1\\right\\}\\left\\{x\\le ' + letters[2 * i + 40] + '\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.8', latex: '\\left(x-' + letters[2 * i + 40] + '+0.02\\right)^{2}+\\left(y-' + letters[2 * i + 41] + '-1.82\\right)^{2}=0.1\\left\\{x\\le0.45\\left(y-' + letters[2 * i + 41] + '-0.42\\right)^{2}+' + letters[2 * i + 40] + '-0.95\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.9', latex: '\\left(x-' + letters[2 * i + 40] + '+0.02\\right)^{2}+\\left(y-' + letters[2 * i + 41] + '-1.82\\right)^{2}=0.1\\left\\{x\\ge0.45\\left(y-' + letters[2 * i + 41] + '-0.42\\right)^{2}+' + letters[2 * i + 40] + '-0.95\\right\\}\\left\\{y-' + letters[2 * i + 41] + '\\ge1.82\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.10', latex: 'x=\\frac{0.09+\\sqrt{0.1}}{1.2544}\\left(y-' + letters[2 * i + 41] + '-0.7\\right)^{2}+' + letters[2 * i + 40] + '-0.11\\left\\{0.7\\le y-' + letters[2 * i + 41] + '\\le1.82\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.11', latex: 'x=' + letters[2 * i + 40] + '-0.11\\left\\{0.46\\le y-' + letters[2 * i + 41] + '\\le0.7\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.12', latex: 'y=' + letters[2 * i + 41] + '+0.46\\left\\{-0.11\\le x-' + letters[2 * i + 40] + '\\le0.12\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.13', latex: 'x=\\frac{2700}{11236}\\left(y-' + letters[2 * i + 41] + '-0.46\\right)^{2}+' + letters[2 * i + 40] + '+0.12\\left\\{0.46\\le y-' + letters[2 * i + 41] + '\\le1.52\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.14', latex: 'x=-\\frac{56}{121}\\left(y-' + letters[2 * i + 41] + '-0.42\\right)^{2}+' + letters[2 * i + 40] + '+0.95\\left\\{-\\frac{500}{6889}\\left(x-' + letters[2 * i + 40] + '\\right)^{2}-0.39\\le y-' + letters[2 * i + 41] + '\\le1.52\\right\\}\\left\\{x\\ge ' + letters[2 * i + 40] + '\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.xy', latex: '\\left(' + letters[2 * i + 40] + ',' + letters[2 * i + 41] + '\\right)', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.x', latex: letters[2 * i + 40] + '=' + (12 * i - 6.03).toString(), sliderBounds: { min: '-14.03', max: '13.97', step: '4' } })
+                        calculator.setExpression({ hidden: false, id: 'wB' + (i + 1).toString() + '.y', latex: letters[2 * i + 41] + '=-14.5', sliderBounds: { min: '-14.5', max: '13.5', step: '4' } })
+                    }
+                    // Black bishops
+                    for (i = 2; i < 4; i++) {
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.1', latex: 'y=' + letters[2 * i + 41] + '-1.11\\left\\{-1.16\\le x-' + letters[2 * i + 40] + '\\le1.16\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.2', latex: 'x=' + letters[2 * i + 40] + '-1.16\\left\\{-1.11\\le y-' + letters[2 * i + 41] + '\\le-0.8\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 40] + '+0.83\\right)^{2}+\\left(y-' + letters[2 * i + 41] + '+0.8\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2 * i + 40] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[2 * i + 41] + '-0.8\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.4', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 40] + '-0.83\\right)^{2}+\\left(y-' + letters[2 * i + 41] + '+0.8\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2 * i + 40] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[2 * i + 41] + '-0.8\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.5', latex: 'x=' + letters[2 * i + 40] + '+1.16\\left\\{-1.11\\le y-' + letters[2 * i + 41] + '\\le-0.8\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.6', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[2 * i + 40] + '\\right)^{2}+' + letters[2 * i + 41] + '-0.39\\left\\{-0.83\\le x-' + letters[2 * i + 40] + '\\le0.83\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.7', latex: 'x=0.45\\left(y-' + letters[2 * i + 41] + '-0.42\\right)^{2}+' + letters[2 * i + 40] + '-0.95\\left\\{-\\frac{500}{6889}\\left(x-' + letters[2 * i + 40] + '\\right)^{2}-0.39\\le y-' + letters[2 * i + 41] + '\\le1.64\\right\\}\\left\\{\\left(x-' + letters[2 * i + 40] + '+0.02\\right)^{2}+\\left(y+' + letters[2 * i + 41] + '-1.82\\right)^{2}\\ge0.1\\right\\}\\left\\{x\\le ' + letters[2 * i + 40] + '\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.8', latex: '\\left(x-' + letters[2 * i + 40] + '+0.02\\right)^{2}+\\left(y-' + letters[2 * i + 41] + '-1.82\\right)^{2}=0.1\\left\\{x\\le0.45\\left(y-' + letters[2 * i + 41] + '-0.42\\right)^{2}+' + letters[2 * i + 40] + '-0.95\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.9', latex: '\\left(x-' + letters[2 * i + 40] + '+0.02\\right)^{2}+\\left(y-' + letters[2 * i + 41] + '-1.82\\right)^{2}=0.1\\left\\{x\\ge0.45\\left(y-' + letters[2 * i + 41] + '-0.42\\right)^{2}+' + letters[2 * i + 40] + '-0.95\\right\\}\\left\\{y-' + letters[2 * i + 41] + '\\ge1.82\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.10', latex: 'x=\\frac{0.09+\\sqrt{0.1}}{1.2544}\\left(y-' + letters[2 * i + 41] + '-0.7\\right)^{2}+' + letters[2 * i + 40] + '-0.11\\left\\{0.7\\le y-' + letters[2 * i + 41] + '\\le1.82\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.11', latex: 'x=' + letters[2 * i + 40] + '-0.11\\left\\{0.46\\le y-' + letters[2 * i + 41] + '\\le0.7\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.12', latex: 'y=' + letters[2 * i + 41] + '+0.46\\left\\{-0.11\\le x-' + letters[2 * i + 40] + '\\le0.12\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.13', latex: 'x=\\frac{2700}{11236}\\left(y-' + letters[2 * i + 41] + '-0.46\\right)^{2}+' + letters[2 * i + 40] + '+0.12\\left\\{0.46\\le y-' + letters[2 * i + 41] + '\\le1.52\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.14', latex: 'x=-\\frac{56}{121}\\left(y-' + letters[2 * i + 41] + '-0.42\\right)^{2}+' + letters[2 * i + 40] + '+0.95\\left\\{-\\frac{500}{6889}\\left(x-' + letters[2 * i + 40] + '\\right)^{2}-0.39\\le y-' + letters[2 * i + 41] + '\\le1.52\\right\\}\\left\\{x\\ge ' + letters[2 * i + 40] + '\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.xy', latex: '\\left(' + letters[2 * i + 40] + ',' + letters[2 * i + 41] + '\\right)', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.x', latex: letters[2 * i + 40] + '=' + (12 * (i - 2) - 6.03).toString(), sliderBounds: { min: '-14.03', max: '13.97', step: '4' } })
+                        calculator.setExpression({ hidden: false, id: 'bB' + (i - 1).toString() + '.y', latex: letters[2 * i + 41] + '=13.5', sliderBounds: { min: '-14.5', max: '13.5', step: '4' } })
+                    }
+                    // White king
+                    {
+                        calculator.setExpression({ id: 'wK1.1', latex: 'y=' + letters[49] + '-1.45\\left\\{-1.16\\le x-' + letters[48] + '\\le1.16\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.2', latex: 'x=' + letters[48] + '-1.16\\left\\{-1.45\\le y-' + letters[49] + '\\le-1.14\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[48] + '+0.83\\right)^{2}+\\left(y-' + letters[49] + '+1.14\\right)^{2}=0.1296\\left\\{x\\le ' + letters[48] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[49] + '-1.14\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.4', latex: 'y=-1.17\\left(x-' + letters[48] + '+1.47466\\right)+' + letters[49] + '-0.09\\left\\{\\frac{1296}{1089}\\left(x-' + letters[48] + '+0.83\\right)^{2}+\\left(y-' + letters[49] + '+1.14\\right)^{2}\\ge0.1296\\right\\}\\left\\{-1.09\\le y-' + letters[49] + '\\le-0.09\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.5', latex: 'x=0.6\\left(y-' + letters[49] + '-0.24\\right)^{2}+' + letters[48] + '-1.54\\left\\{\\left(x-' + letters[48] + '+0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\le0.64\\right\\}\\left\\{y\\ge ' + letters[49] + '-0.09\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.6', latex: '\\left(x-' + letters[48] + '+0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}=0.64\\left\\{0.24\\le y-' + letters[49] + '\\le-0.4\\left(x-' + letters[48] + '+0.77\\right)^{2}+1.01\\right\\}\\left\\{0.6\\left(y-' + letters[49] + '-0.24\\right)^{2}-1.54\\le x-' + letters[48] + '\\le-0.77\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.7', latex: 'y=-0.4\\left(x-' + letters[48] + '+0.77\\right)^{2}+' + letters[49] + '+1.01\\left\\{\\left(x-' + letters[48] + '+0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\le0.64\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.8', latex: 'y=-0.4\\left(x-' + letters[48] + '+0.77\\right)^{2}+' + letters[49] + '+1.01\\left\\{\\left(x-' + letters[48] + '+0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\ge0.64\\right\\}\\left\\{-0.77\\le x-' + letters[48] + '\\le-0.3\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.9', latex: 'y=\\frac{4459}{1500}\\left(x-' + letters[48] + '+0.24\\right)+' + letters[49] + '+1.1\\left\\{-0.3\\le x-' + letters[48] + '\\le-0.24\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.10', latex: 'y=' + letters[49] + '+1.1\\left\\{-0.5\\le x-' + letters[48] + '\\le-0.24\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.11', latex: 'x=' + letters[48] + '-0.5\\left\\{1.1\\le y-' + letters[49] + '\\le1.56\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.12', latex: 'y=' + letters[49] + '+1.56\\left\\{-0.5\\le x-' + letters[48] + '\\le-0.23\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.13', latex: 'x=' + letters[48] + '-0.23\\left\\{1.56\\le y-' + letters[49] + '\\le1.83\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.14', latex: 'y=' + letters[49] + '+1.83\\left\\{-0.23\\le x-' + letters[48] + '\\le0.23\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.15', latex: 'x=' + letters[48] + '+0.23\\left\\{1.56\\le y-' + letters[49] + '\\le1.83\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.16', latex: 'y=' + letters[49] + '+1.56\\left\\{0.23\\le x-' + letters[48] + '\\le0.5\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.17', latex: 'x=' + letters[48] + '+0.5\\left\\{1.1\\le y-' + letters[49] + '\\le1.56\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.18', latex: 'y=' + letters[49] + '+1.1\\left\\{0.24\\le x-' + letters[48] + '\\le0.5\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.19', latex: 'y=-\\frac{4459}{1500}\\left(x-' + letters[48] + '-0.24\\right)+' + letters[49] + '+1.1\\left\\{0.24\\le x-' + letters[48] + '\\le0.3\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.20', latex: 'y=-0.4\\left(x-' + letters[48] + '-0.77\\right)^{2}+' + letters[49] + '+1.01\\left\\{\\left(x-' + letters[48] + '-0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\ge0.64\\right\\}\\left\\{0.3\\le x-' + letters[48] + '\\le0.77\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.21', latex: 'y=-0.4\\left(x-' + letters[48] + '-0.77\\right)^{2}+' + letters[49] + '+1.01\\left\\{\\left(x-' + letters[48] + '-0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\le0.64\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.22', latex: '\\left(x-' + letters[48] + '-0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}=0.64\\left\\{0.24\\le y-' + letters[49] + '\\le-0.4\\left(x-' + letters[48] + '-0.77\\right)^{2}+1.01\\right\\}\\left\\{0.77\\le x-' + letters[48] + '\\le-0.6\\left(y-' + letters[49] + '-0.24\\right)^{2}+1.54\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.23', latex: 'x=-0.6\\left(y-' + letters[49] + '-0.24\\right)^{2}+' + letters[48] + '+1.54\\left\\{\\left(x-' + letters[48] + '-0.77\\right)^{2}+\\left(y-' + letters[49] + '-0.24\\right)^{2}\\le0.64\\right\\}\\left\\{y\\ge ' + letters[49] + '-0.09\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.24', latex: 'y=1.17\\left(x-' + letters[48] + '-1.47466\\right)+' + letters[49] + '-0.09\\left\\{\\frac{1296}{1089}\\left(x-' + letters[48] + '-0.83\\right)^{2}+\\left(y-' + letters[49] + '+1.14\\right)^{2}\\ge0.1296\\right\\}\\left\\{-1.09\\le y-' + letters[49] + '\\le-0.09\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.25', latex: '\\frac{1296}{1089}\\left(x-' + letters[48] + '-0.83\\right)^{2}+\\left(y-' + letters[49] + '+1.14\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[48] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[49] + '-1.14\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.26', latex: 'x=' + letters[48] + '+1.16\\left\\{-1.45\\le y-' + letters[49] + '\\le-1.14\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.27', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[48] + '\\right)^{2}+' + letters[49] + '-0.73\\left\\{-0.83\\le x-' + letters[48] + '\\le0.83\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.28', latex: 'x=' + letters[48] + '-0.29\\left\\{-0.31\\le y-' + letters[49] + '\\le0.31\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.29', latex: 'y=-\\frac{325}{289}\\left(x-' + letters[48] + '+0.63\\right)^{2}+' + letters[49] + '+0.44\\left\\{-0.63\\le x-' + letters[48] + '\\le-0.29\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.30', latex: 'y=-\\frac{78125}{45796}\\left(x-' + letters[48] + '+0.63\\right)^{2}+' + letters[49] + '+0.44\\left\\{-0.8012\\le x-' + letters[48] + '\\le-0.63\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.31', latex: 'x=3.078125\\left(y-' + letters[49] + '-0.23\\right)^{2}+' + letters[48] + '-0.88\\left\\{0.23\\le y-' + letters[49] + '\\le0.39\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.32', latex: 'x=\\frac{75}{49}\\left(y-' + letters[49] + '-0.23\\right)^{2}+' + letters[48] + '-0.88\\left\\{0.09\\le y-' + letters[49] + '\\le0.23\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.33', latex: 'y=-\\frac{80}{69}\\left(x-' + letters[48] + '+0.505\\right)+' + letters[49] + '-0.31\\left\\{-0.85\\le x-' + letters[48] + '\\le-0.505\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.34', latex: 'y=' + letters[49] + '-0.31\\left\\{-0.505\\le x-' + letters[48] + '\\le-0.29\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.35', latex: 'x=' + letters[48] + '+0.29\\left\\{-0.31\\le y-' + letters[49] + '\\le0.31\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.36', latex: 'y=-\\frac{325}{289}\\left(x-' + letters[48] + '-0.63\\right)^{2}+' + letters[49] + '+0.44\\left\\{0.29\\le x-' + letters[48] + '\\le0.63\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.37', latex: 'y=-\\frac{78125}{45796}\\left(x-' + letters[48] + '-0.63\\right)^{2}+' + letters[49] + '+0.44\\left\\{0.63\\le x-' + letters[48] + '\\le0.8012\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.38', latex: 'x=-3.078125\\left(y-' + letters[49] + '-0.23\\right)^{2}+' + letters[48] + '+0.88\\left\\{0.23\\le y-' + letters[49] + '\\le0.39\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.39', latex: 'x=-\\frac{75}{49}\\left(y-' + letters[49] + '-0.23\\right)^{2}+' + letters[48] + '+0.88\\left\\{0.09\\le y-' + letters[49] + '\\le0.23\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.40', latex: 'y=\\frac{80}{69}\\left(x-' + letters[48] + '-0.505\\right)+' + letters[49] + '-0.31\\left\\{0.505\\le x-' + letters[48] + '\\le0.85\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.41', latex: 'y=' + letters[49] + '-0.31\\left\\{0.29\\le x-' + letters[48] + '\\le0.505\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.xy', latex: '\\left(' + letters[48] + ',' + letters[49] + '\\right)', color: '#BA8C63' })
+                        calculator.setExpression({ id: 'wK1.x', latex: letters[48] + '=2.01', sliderBounds: { min: '-13.99', max: '14.01', step: '4' } })
+                        calculator.setExpression({ id: 'wK1.y', latex: letters[49] + '=-14.16', sliderBounds: { min: '-14.16', max: '13.84', step: '4' } })
+                    }
+                    // Black king
+                    {
+                        calculator.setExpression({ id: 'bK1.1', latex: 'y=' + letters[51] + '-1.45\\left\\{-1.16\\le x-' + letters[50] + '\\le1.16\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.2', latex: 'x=' + letters[50] + '-1.16\\left\\{-1.45\\le y-' + letters[51] + '\\le-1.14\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[50] + '+0.83\\right)^{2}+\\left(y-' + letters[51] + '+1.14\\right)^{2}=0.1296\\left\\{x\\le ' + letters[50] + '-0.83\\right\\}\\left\\{y\\ge ' + letters[51] + '-1.14\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.4', latex: 'y=-1.17\\left(x-' + letters[50] + '+1.47466\\right)+' + letters[51] + '-0.09\\left\\{\\frac{1296}{1089}\\left(x-' + letters[50] + '+0.83\\right)^{2}+\\left(y-' + letters[51] + '+1.14\\right)^{2}\\ge0.1296\\right\\}\\left\\{-1.09\\le y-' + letters[51] + '\\le-0.09\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.5', latex: 'x=0.6\\left(y-' + letters[51] + '-0.24\\right)^{2}+' + letters[50] + '-1.54\\left\\{\\left(x-' + letters[50] + '+0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\le0.64\\right\\}\\left\\{y\\ge ' + letters[51] + '-0.09\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.6', latex: '\\left(x-' + letters[50] + '+0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}=0.64\\left\\{0.24\\le y-' + letters[51] + '\\le-0.4\\left(x-' + letters[50] + '+0.77\\right)^{2}+1.01\\right\\}\\left\\{0.6\\left(y-' + letters[51] + '-0.24\\right)^{2}-1.54\\le x-' + letters[50] + '\\le-0.77\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.7', latex: 'y=-0.4\\left(x-' + letters[50] + '+0.77\\right)^{2}+' + letters[51] + '+1.01\\left\\{\\left(x-' + letters[50] + '+0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\le0.64\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.8', latex: 'y=-0.4\\left(x-' + letters[50] + '+0.77\\right)^{2}+' + letters[51] + '+1.01\\left\\{\\left(x-' + letters[50] + '+0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\ge0.64\\right\\}\\left\\{-0.77\\le x-' + letters[50] + '\\le-0.3\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.9', latex: 'y=\\frac{4459}{1500}\\left(x-' + letters[50] + '+0.24\\right)+' + letters[51] + '+1.1\\left\\{-0.3\\le x-' + letters[50] + '\\le-0.24\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.10', latex: 'y=' + letters[51] + '+1.1\\left\\{-0.5\\le x-' + letters[50] + '\\le-0.24\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.11', latex: 'x=' + letters[50] + '-0.5\\left\\{1.1\\le y-' + letters[51] + '\\le1.56\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.12', latex: 'y=' + letters[51] + '+1.56\\left\\{-0.5\\le x-' + letters[50] + '\\le-0.23\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.13', latex: 'x=' + letters[50] + '-0.23\\left\\{1.56\\le y-' + letters[51] + '\\le1.83\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.14', latex: 'y=' + letters[51] + '+1.83\\left\\{-0.23\\le x-' + letters[50] + '\\le0.23\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.15', latex: 'x=' + letters[50] + '+0.23\\left\\{1.56\\le y-' + letters[51] + '\\le1.83\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.16', latex: 'y=' + letters[51] + '+1.56\\left\\{0.23\\le x-' + letters[50] + '\\le0.5\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.17', latex: 'x=' + letters[50] + '+0.5\\left\\{1.1\\le y-' + letters[51] + '\\le1.56\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.18', latex: 'y=' + letters[51] + '+1.1\\left\\{0.24\\le x-' + letters[50] + '\\le0.5\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.19', latex: 'y=-\\frac{4459}{1500}\\left(x-' + letters[50] + '-0.24\\right)+' + letters[51] + '+1.1\\left\\{0.24\\le x-' + letters[50] + '\\le0.3\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.20', latex: 'y=-0.4\\left(x-' + letters[50] + '-0.77\\right)^{2}+' + letters[51] + '+1.01\\left\\{\\left(x-' + letters[50] + '-0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\ge0.64\\right\\}\\left\\{0.3\\le x-' + letters[50] + '\\le0.77\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.21', latex: 'y=-0.4\\left(x-' + letters[50] + '-0.77\\right)^{2}+' + letters[51] + '+1.01\\left\\{\\left(x-' + letters[50] + '-0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\le0.64\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.22', latex: '\\left(x-' + letters[50] + '-0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}=0.64\\left\\{0.24\\le y-' + letters[51] + '\\le-0.4\\left(x-' + letters[50] + '-0.77\\right)^{2}+1.01\\right\\}\\left\\{0.77\\le x-' + letters[50] + '\\le-0.6\\left(y-' + letters[51] + '-0.24\\right)^{2}+1.54\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.23', latex: 'x=-0.6\\left(y-' + letters[51] + '-0.24\\right)^{2}+' + letters[50] + '+1.54\\left\\{\\left(x-' + letters[50] + '-0.77\\right)^{2}+\\left(y-' + letters[51] + '-0.24\\right)^{2}\\le0.64\\right\\}\\left\\{y\\ge ' + letters[51] + '-0.09\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.24', latex: 'y=1.17\\left(x-' + letters[50] + '-1.47466\\right)+' + letters[51] + '-0.09\\left\\{\\frac{1296}{1089}\\left(x-' + letters[50] + '-0.83\\right)^{2}+\\left(y-' + letters[51] + '+1.14\\right)^{2}\\ge0.1296\\right\\}\\left\\{-1.09\\le y-' + letters[51] + '\\le-0.09\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.25', latex: '\\frac{1296}{1089}\\left(x-' + letters[50] + '-0.83\\right)^{2}+\\left(y-' + letters[51] + '+1.14\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[50] + '+0.83\\right\\}\\left\\{y\\ge ' + letters[51] + '-1.14\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.26', latex: 'x=' + letters[50] + '+1.16\\left\\{-1.45\\le y-' + letters[51] + '\\le-1.14\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.27', latex: 'y=-\\frac{500}{6889}\\left(x-' + letters[50] + '\\right)^{2}+' + letters[51] + '-0.73\\left\\{-0.83\\le x-' + letters[50] + '\\le0.83\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.28', latex: 'x=' + letters[50] + '-0.29\\left\\{-0.31\\le y-' + letters[51] + '\\le0.31\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.29', latex: 'y=-\\frac{325}{289}\\left(x-' + letters[50] + '+0.63\\right)^{2}+' + letters[51] + '+0.44\\left\\{-0.63\\le x-' + letters[50] + '\\le-0.29\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.30', latex: 'y=-\\frac{78125}{45796}\\left(x-' + letters[50] + '+0.63\\right)^{2}+' + letters[51] + '+0.44\\left\\{-0.8012\\le x-' + letters[50] + '\\le-0.63\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.31', latex: 'x=3.078125\\left(y-' + letters[51] + '-0.23\\right)^{2}+' + letters[50] + '-0.88\\left\\{0.23\\le y-' + letters[51] + '\\le0.39\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.32', latex: 'x=\\frac{75}{49}\\left(y-' + letters[51] + '-0.23\\right)^{2}+' + letters[50] + '-0.88\\left\\{0.09\\le y-' + letters[51] + '\\le0.23\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.33', latex: 'y=-\\frac{80}{69}\\left(x-' + letters[50] + '+0.505\\right)+' + letters[51] + '-0.31\\left\\{-0.85\\le x-' + letters[50] + '\\le-0.505\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.34', latex: 'y=' + letters[51] + '-0.31\\left\\{-0.505\\le x-' + letters[50] + '\\le-0.29\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.35', latex: 'x=' + letters[50] + '+0.29\\left\\{-0.31\\le y-' + letters[51] + '\\le0.31\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.36', latex: 'y=-\\frac{325}{289}\\left(x-' + letters[50] + '-0.63\\right)^{2}+' + letters[51] + '+0.44\\left\\{0.29\\le x-' + letters[50] + '\\le0.63\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.37', latex: 'y=-\\frac{78125}{45796}\\left(x-' + letters[50] + '-0.63\\right)^{2}+' + letters[51] + '+0.44\\left\\{0.63\\le x-' + letters[50] + '\\le0.8012\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.38', latex: 'x=-3.078125\\left(y-' + letters[51] + '-0.23\\right)^{2}+' + letters[50] + '+0.88\\left\\{0.23\\le y-' + letters[51] + '\\le0.39\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.39', latex: 'x=-\\frac{75}{49}\\left(y-' + letters[51] + '-0.23\\right)^{2}+' + letters[50] + '+0.88\\left\\{0.09\\le y-' + letters[51] + '\\le0.23\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.40', latex: 'y=\\frac{80}{69}\\left(x-' + letters[50] + '-0.505\\right)+' + letters[51] + '-0.31\\left\\{0.505\\le x-' + letters[50] + '\\le0.85\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.41', latex: 'y=' + letters[51] + '-0.31\\left\\{0.29\\le x-' + letters[50] + '\\le0.505\\right\\}', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.xy', latex: '\\left(' + letters[50] + ',' + letters[51] + '\\right)', color: '#000000' })
+                        calculator.setExpression({ id: 'bK1.x', latex: letters[50] + '=2.01', sliderBounds: { min: '-13.99', max: '14.01', step: '4' } })
+                        calculator.setExpression({ id: 'bK1.y', latex: letters[51] + '=13.84', sliderBounds: { min: '-14.16', max: '13.84', step: '4' } })
+                    }
+                    // White knights
+                    for (i = 0; i < 2; i++) {
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.1', latex: 'y=' + letters[2 * i + 53] + '-1.11\\left\\{-1.15\\le x-' + letters[2 * i + 52] + '\\le1.15\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.2', latex: 'x=' + letters[2 * i + 52] + '-1.15\\left\\{-1.11\\le y-' + letters[2 * i + 53] + '\\le-0.8\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 52] + '+0.82\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '+0.8\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2 * i + 52] + '-0.82\\right\\}\\left\\{y\\ge ' + letters[2 * i + 53] + '-0.8\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.4', latex: 'y=-\\frac{500}{6724}\\left(x-' + letters[2 * i + 52] + '\\right)^{2}+' + letters[2 * i + 53] + '-0.39\\left\\{-0.82\\le x-' + letters[2 * i + 52] + '\\le0.82\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.5', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 52] + '-0.82\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '+0.8\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2 * i + 52] + '+0.82\\right\\}\\left\\{y\\ge ' + letters[2 * i + 53] + '-0.8\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.6', latex: 'x=' + letters[2 * i + 52] + '+1.15\\left\\{-1.11\\le y-' + letters[2 * i + 53] + '\\le-0.8\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.7', latex: 'x=' + letters[2 * i + 52] + '-0.85\\left\\{\\frac{1296}{1089}\\left(x-' + letters[2 * i + 52] + '+0.82\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '+0.8\\right)^{2}\\ge0.1296\\right\\}\\left\\{-0.5\\le y-' + letters[2 * i + 53] + '\\le-0.42\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.8', latex: 'x=0.98\\left(y-' + letters[2 * i + 53] + '+0.42\\right)^{1.7}+' + letters[2 * i + 52] + '-0.85\\left\\{-\\frac{300}{121}\\left(y-' + letters[2 * i + 53] + '-0.55\\right)^{2}-0.13\\le x-' + letters[2 * i + 52] + '\\le-0.32\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.9', latex: 'x=0.98\\left(y-' + letters[2 * i + 53] + '+0.42\\right)^{1.7}+' + letters[2 * i + 52] + '-0.85\\left\\{x\\le-\\frac{300}{121}\\left(y-' + letters[2 * i + 53] + '-0.55\\right)^{2}+' + letters[2 * i + 52] + '-0.13\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.10', latex: 'x=-\\frac{300}{121}\\left(y-' + letters[2 * i + 53] + '-0.55\\right)^{2}+' + letters[2 * i + 52] + '-0.13\\left\\{x\\le0.98\\left(y-' + letters[2 * i + 53] + '+0.42\\right)^{1.7}+' + letters[2 * i + 52] + '-0.85\\right\\}\\left\\{0.3\\le y-' + letters[2 * i + 53] + '\\le0.66\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.11', latex: 'y=\\frac{0.28}{0.46^{2.3}}\\left(x-' + letters[2 * i + 52] + '+0.62\\right)^{2.3}+' + letters[2 * i + 53] + '+0.38\\left\\{x\\le ' + letters[2 * i + 52] + '-0.16\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.12', latex: 'y=-\\frac{0.27}{0.32^{2.3}}\\left(-x+' + letters[2 * i + 52] + '-0.62\\right)^{2.3}+' + letters[2 * i + 53] + '+0.38\\left\\{x\\ge ' + letters[2 * i + 52] + '-0.94\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.13', latex: 'y=' + letters[2 * i + 53] + '+0.11\\left\\{-1.1\\le x-' + letters[2 * i + 52] + '\\le-0.94\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.14', latex: 'x=-\\frac{395000}{35937}\\left(y-' + letters[2 * i + 53] + '-0.44\\right)^{3}+' + letters[2 * i + 52] + '-1.495\\left\\{0.11\\le y-' + letters[2 * i + 53] + '\\le0.44\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.15', latex: 'x=\\frac{395000}{35937}\\left(y-' + letters[2 * i + 53] + '-0.44\\right)^{3}+' + letters[2 * i + 52] + '-1.495\\left\\{y\\le1.44\\left(x-' + letters[2 * i + 52] + '+1.12\\right)+' + letters[2 * i + 53] + '+1.07\\right\\}\\left\\{0.44\\le y-' + letters[2 * i + 53] + '\\le0.6\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.16', latex: 'y=1.44\\left(x-' + letters[2 * i + 52] + '+1.12\\right)+' + letters[2 * i + 53] + '+1.07\\left\\{-1.49\\le x-' + letters[2 * i + 52] + '\\ge\\frac{395000}{35937}\\left(y-' + letters[2 * i + 53] + '-0.44\\right)^{3}-1.495\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.17', latex: 'y=1.44\\left(x-' + letters[2 * i + 52] + '+1.12\\right)+' + letters[2 * i + 53] + '+1.07\\left\\{-1.47\\le x-' + letters[2 * i + 52] + '\\le\\frac{395000}{35937}\\left(y-' + letters[2 * i + 53] + '-0.44\\right)^{3}-1.495\\right\\}\\left\\{x\\le ' + letters[2 * i + 52] + '-1.12\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.18', latex: 'y=\\frac{0.47}{0.2^{1.4}}\\left(x-' + letters[2 * i + 52] + '+0.92\\right)^{1.4}+' + letters[2 * i + 53] + '+1.54\\left\\{-1.12\\le x-' + letters[2 * i + 52] + '\\le-0.92\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.19', latex: 'y=x-' + letters[2 * i + 52] + '+' + letters[2 * i + 53] + '+2.46\\left\\{\\frac{169}{49}\\left(x-' + letters[2 * i + 52] + '+0.56\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '-1.8\\right)^{2}\\ge0.0676\\right\\}\\left\\{-0.92\\le x-' + letters[2 * i + 52] + '\\le-0.52\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.20', latex: '\\frac{169}{49}\\left(x-' + letters[2 * i + 52] + '+0.56\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '-1.8\\right)^{2}=0.0676\\left\\{x\\le ' + letters[2 * i + 52] + '-0.56\\right\\}\\left\\{y\\ge x-' + letters[2 * i + 52] + '+' + letters[2 * i + 53] + '+2.46\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.21', latex: 'y=' + letters[2 * i + 53] + '+2.06\\left\\{-0.56\\le x-' + letters[2 * i + 52] + '\\le-0.48\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.22', latex: 'y=-\\frac{29}{28}\\left(x-' + letters[2 * i + 52] + '+0.48\\right)+' + letters[2 * i + 53] + '+2.06\\left\\{-0.48\\le x-' + letters[2 * i + 52] + '\\le-0.2\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.23', latex: 'y=' + letters[2 * i + 53] + '+1.77\\left\\{-0.2\\le x-' + letters[2 * i + 52] + '\\le-0.12\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.24', latex: 'y=-0.65\\left(x-' + letters[2 * i + 52] + '+0.12\\right)^{2}+' + letters[2 * i + 53] + '+1.77\\left\\{\\frac{5041}{3364}\\left(x-' + letters[2 * i + 52] + '+0.12\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '-0.35\\right)^{2}\\le2.0164\\right\\}\\left\\{x\\ge ' + letters[2 * i + 52] + '-0.12\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.25', latex: '\\frac{5041}{3364}\\left(x-' + letters[2 * i + 52] + '+0.12\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '-0.35\\right)^{2}=2.0164\\left\\{0.35\\le y-' + letters[2 * i + 53] + '\\le-0.65\\left(x-' + letters[2 * i + 52] + '+0.12\\right)^{2}+1.77\\right\\}\\left\\{x\\ge ' + letters[2 * i + 52] + '-0.12\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.26', latex: 'x=-0.28\\left(y-' + letters[2 * i + 53] + '-0.35\\right)^{2}+' + letters[2 * i + 52] + '+1.04\\left\\{\\frac{1296}{1089}\\left(x-' + letters[2 * i + 52] + '-0.82\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '+0.8\\right)^{2}\\ge0.1296\\right\\}\\left\\{-0.5\\le y-' + letters[2 * i + 53] + '\\le0.35\\right\\}', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.27', latex: 'y=-\\frac{800}{147}\\left(x-' + letters[2 * i + 52] + '+0.505\\right)^{2}+' + letters[2 * i + 53] + '+1.37\\left\\{-0.505\\le x-' + letters[2 * i + 52] + '\\le-0.4\\right\\}', lineWidth: '1', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.28', latex: 'y=-\\frac{6800}{1089}\\left(x-' + letters[2 * i + 52] + '+0.505\\right)^{2}+' + letters[2 * i + 53] + '+1.37\\left\\{-\\frac{12000000}{2401}\\left(y-' + letters[2 * i + 53] + '-1.27\\right)^{4}-0.4\\le x-' + letters[2 * i + 52] + '\\le-0.505\\right\\}\\left\\{y\\ge ' + letters[2 * i + 53] + '+1.3\\right\\}', lineWidth: '1', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.29', latex: 'y=-\\frac{6800}{1089}\\left(x-' + letters[2 * i + 52] + '+0.505\\right)^{2}+' + letters[2 * i + 53] + '+1.37\\left\\{x\\le-\\frac{12000000}{2401}\\left(y-' + letters[2 * i + 53] + '-1.27\\right)^{4}+' + letters[2 * i + 52] + '-0.4\\right\\}', lineWidth: '1', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.30', latex: 'x=-\\frac{12000000}{2401}\\left(y-' + letters[2 * i + 53] + '-1.27\\right)^{4}+' + letters[2 * i + 52] + '-0.4\\left\\{y\\le-\\frac{6800}{1089}\\left(x-' + letters[2 * i + 52] + '+0.505\\right)^{2}+' + letters[2 * i + 53] + '+1.37\\right\\}\\left\\{y\\le ' + letters[2 * i + 53] + '+1.27\\right\\}', lineWidth: '1', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.31', latex: 'x=' + letters[2 * i + 52] + '-0.4\\left\\{1.27\\le y-' + letters[2 * i + 53] + '\\le1.31\\right\\}', lineWidth: '1', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.32', latex: '\\left(' + letters[2 * i + 52] + '-0.52,' + letters[2 * i + 53] + '+1.28\\right)', pointSize: '2', dragMode: 'NONE', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.xy', latex: '\\left(' + letters[2 * i + 52] + ',' + letters[2 * i + 53] + '\\right)', color: '#BA8C63' })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.x', latex: letters[2 * i + 52] + '=' + (20 * i - 9.88).toString(), sliderBounds: { min: '-13.88', max: '14.12', step: '4' } })
+                        calculator.setExpression({ hidden: false, id: 'wN' + (i + 1).toString() + '.y', latex: letters[2 * i + 53] + '=-14.5', sliderBounds: { min: '-14.5', max: '13.5', step: '4' } })
+                    }
+                    // Black knights
+                    for (i = 2; i < 4; i++) {
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.1', latex: 'y=' + letters[2 * i + 53] + '-1.11\\left\\{-1.15\\le x-' + letters[2 * i + 52] + '\\le1.15\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.2', latex: 'x=' + letters[2 * i + 52] + '-1.15\\left\\{-1.11\\le y-' + letters[2 * i + 53] + '\\le-0.8\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.3', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 52] + '+0.82\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '+0.8\\right)^{2}=0.1296\\left\\{x\\le ' + letters[2 * i + 52] + '-0.82\\right\\}\\left\\{y\\ge ' + letters[2 * i + 53] + '-0.8\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.4', latex: 'y=-\\frac{500}{6724}\\left(x-' + letters[2 * i + 52] + '\\right)^{2}+' + letters[2 * i + 53] + '-0.39\\left\\{-0.82\\le x-' + letters[2 * i + 52] + '\\le0.82\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.5', latex: '\\frac{1296}{1089}\\left(x-' + letters[2 * i + 52] + '-0.82\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '+0.8\\right)^{2}=0.1296\\left\\{x\\ge ' + letters[2 * i + 52] + '+0.82\\right\\}\\left\\{y\\ge ' + letters[2 * i + 53] + '-0.8\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.6', latex: 'x=' + letters[2 * i + 52] + '+1.15\\left\\{-1.11\\le y-' + letters[2 * i + 53] + '\\le-0.8\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.7', latex: 'x=' + letters[2 * i + 52] + '-0.85\\left\\{\\frac{1296}{1089}\\left(x-' + letters[2 * i + 52] + '+0.82\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '+0.8\\right)^{2}\\ge0.1296\\right\\}\\left\\{-0.5\\le y-' + letters[2 * i + 53] + '\\le-0.42\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.8', latex: 'x=0.98\\left(y-' + letters[2 * i + 53] + '+0.42\\right)^{1.7}+' + letters[2 * i + 52] + '-0.85\\left\\{-\\frac{300}{121}\\left(y-' + letters[2 * i + 53] + '-0.55\\right)^{2}-0.13\\le x-' + letters[2 * i + 52] + '\\le-0.32\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.9', latex: 'x=0.98\\left(y-' + letters[2 * i + 53] + '+0.42\\right)^{1.7}+' + letters[2 * i + 52] + '-0.85\\left\\{x\\le-\\frac{300}{121}\\left(y-' + letters[2 * i + 53] + '-0.55\\right)^{2}+' + letters[2 * i + 52] + '-0.13\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.10', latex: 'x=-\\frac{300}{121}\\left(y-' + letters[2 * i + 53] + '-0.55\\right)^{2}+' + letters[2 * i + 52] + '-0.13\\left\\{x\\le0.98\\left(y-' + letters[2 * i + 53] + '+0.42\\right)^{1.7}+' + letters[2 * i + 52] + '-0.85\\right\\}\\left\\{0.3\\le y-' + letters[2 * i + 53] + '\\le0.66\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.11', latex: 'y=\\frac{0.28}{0.46^{2.3}}\\left(x-' + letters[2 * i + 52] + '+0.62\\right)^{2.3}+' + letters[2 * i + 53] + '+0.38\\left\\{x\\le ' + letters[2 * i + 52] + '-0.16\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.12', latex: 'y=-\\frac{0.27}{0.32^{2.3}}\\left(-x+' + letters[2 * i + 52] + '-0.62\\right)^{2.3}+' + letters[2 * i + 53] + '+0.38\\left\\{x\\ge ' + letters[2 * i + 52] + '-0.94\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.13', latex: 'y=' + letters[2 * i + 53] + '+0.11\\left\\{-1.1\\le x-' + letters[2 * i + 52] + '\\le-0.94\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.14', latex: 'x=-\\frac{395000}{35937}\\left(y-' + letters[2 * i + 53] + '-0.44\\right)^{3}+' + letters[2 * i + 52] + '-1.495\\left\\{0.11\\le y-' + letters[2 * i + 53] + '\\le0.44\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.15', latex: 'x=\\frac{395000}{35937}\\left(y-' + letters[2 * i + 53] + '-0.44\\right)^{3}+' + letters[2 * i + 52] + '-1.495\\left\\{y\\le1.44\\left(x-' + letters[2 * i + 52] + '+1.12\\right)+' + letters[2 * i + 53] + '+1.07\\right\\}\\left\\{0.44\\le y-' + letters[2 * i + 53] + '\\le0.6\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.16', latex: 'y=1.44\\left(x-' + letters[2 * i + 52] + '+1.12\\right)+' + letters[2 * i + 53] + '+1.07\\left\\{-1.49\\le x-' + letters[2 * i + 52] + '\\ge\\frac{395000}{35937}\\left(y-' + letters[2 * i + 53] + '-0.44\\right)^{3}-1.495\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.17', latex: 'y=1.44\\left(x-' + letters[2 * i + 52] + '+1.12\\right)+' + letters[2 * i + 53] + '+1.07\\left\\{-1.47\\le x-' + letters[2 * i + 52] + '\\le\\frac{395000}{35937}\\left(y-' + letters[2 * i + 53] + '-0.44\\right)^{3}-1.495\\right\\}\\left\\{x\\le ' + letters[2 * i + 52] + '-1.12\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.18', latex: 'y=\\frac{0.47}{0.2^{1.4}}\\left(x-' + letters[2 * i + 52] + '+0.92\\right)^{1.4}+' + letters[2 * i + 53] + '+1.54\\left\\{-1.12\\le x-' + letters[2 * i + 52] + '\\le-0.92\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.19', latex: 'y=x-' + letters[2 * i + 52] + '+' + letters[2 * i + 53] + '+2.46\\left\\{\\frac{169}{49}\\left(x-' + letters[2 * i + 52] + '+0.56\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '-1.8\\right)^{2}\\ge0.0676\\right\\}\\left\\{-0.92\\le x-' + letters[2 * i + 52] + '\\le-0.52\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.20', latex: '\\frac{169}{49}\\left(x-' + letters[2 * i + 52] + '+0.56\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '-1.8\\right)^{2}=0.0676\\left\\{x\\le ' + letters[2 * i + 52] + '-0.56\\right\\}\\left\\{y\\ge x-' + letters[2 * i + 52] + '+' + letters[2 * i + 53] + '+2.46\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.21', latex: 'y=' + letters[2 * i + 53] + '+2.06\\left\\{-0.56\\le x-' + letters[2 * i + 52] + '\\le-0.48\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.22', latex: 'y=-\\frac{29}{28}\\left(x-' + letters[2 * i + 52] + '+0.48\\right)+' + letters[2 * i + 53] + '+2.06\\left\\{-0.48\\le x-' + letters[2 * i + 52] + '\\le-0.2\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.23', latex: 'y=' + letters[2 * i + 53] + '+1.77\\left\\{-0.2\\le x-' + letters[2 * i + 52] + '\\le-0.12\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.24', latex: 'y=-0.65\\left(x-' + letters[2 * i + 52] + '+0.12\\right)^{2}+' + letters[2 * i + 53] + '+1.77\\left\\{\\frac{5041}{3364}\\left(x-' + letters[2 * i + 52] + '+0.12\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '-0.35\\right)^{2}\\le2.0164\\right\\}\\left\\{x\\ge ' + letters[2 * i + 52] + '-0.12\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.25', latex: '\\frac{5041}{3364}\\left(x-' + letters[2 * i + 52] + '+0.12\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '-0.35\\right)^{2}=2.0164\\left\\{0.35\\le y-' + letters[2 * i + 53] + '\\le-0.65\\left(x-' + letters[2 * i + 52] + '+0.12\\right)^{2}+1.77\\right\\}\\left\\{x\\ge ' + letters[2 * i + 52] + '-0.12\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.26', latex: 'x=-0.28\\left(y-' + letters[2 * i + 53] + '-0.35\\right)^{2}+' + letters[2 * i + 52] + '+1.04\\left\\{\\frac{1296}{1089}\\left(x-' + letters[2 * i + 52] + '-0.82\\right)^{2}+\\left(y-' + letters[2 * i + 53] + '+0.8\\right)^{2}\\ge0.1296\\right\\}\\left\\{-0.5\\le y-' + letters[2 * i + 53] + '\\le0.35\\right\\}', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.27', latex: 'y=-\\frac{800}{147}\\left(x-' + letters[2 * i + 52] + '+0.505\\right)^{2}+' + letters[2 * i + 53] + '+1.37\\left\\{-0.505\\le x-' + letters[2 * i + 52] + '\\le-0.4\\right\\}', lineWidth: '1', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.28', latex: 'y=-\\frac{6800}{1089}\\left(x-' + letters[2 * i + 52] + '+0.505\\right)^{2}+' + letters[2 * i + 53] + '+1.37\\left\\{-\\frac{12000000}{2401}\\left(y-' + letters[2 * i + 53] + '-1.27\\right)^{4}-0.4\\le x-' + letters[2 * i + 52] + '\\le-0.505\\right\\}\\left\\{y\\ge ' + letters[2 * i + 53] + '+1.3\\right\\}', lineWidth: '1', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.29', latex: 'y=-\\frac{6800}{1089}\\left(x-' + letters[2 * i + 52] + '+0.505\\right)^{2}+' + letters[2 * i + 53] + '+1.37\\left\\{x\\le-\\frac{12000000}{2401}\\left(y-' + letters[2 * i + 53] + '-1.27\\right)^{4}+' + letters[2 * i + 52] + '-0.4\\right\\}', lineWidth: '1', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.30', latex: 'x=-\\frac{12000000}{2401}\\left(y-' + letters[2 * i + 53] + '-1.27\\right)^{4}+' + letters[2 * i + 52] + '-0.4\\left\\{y\\le-\\frac{6800}{1089}\\left(x-' + letters[2 * i + 52] + '+0.505\\right)^{2}+' + letters[2 * i + 53] + '+1.37\\right\\}\\left\\{y\\le ' + letters[2 * i + 53] + '+1.27\\right\\}', lineWidth: '1', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.31', latex: 'x=' + letters[2 * i + 52] + '-0.4\\left\\{1.27\\le y-' + letters[2 * i + 53] + '\\le1.31\\right\\}', lineWidth: '1', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.32', latex: '\\left(' + letters[2 * i + 52] + '-0.52,' + letters[2 * i + 53] + '+1.28\\right)', pointSize: '2', dragMode: 'NONE', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.xy', latex: '\\left(' + letters[2 * i + 52] + ',' + letters[2 * i + 53] + '\\right)', color: '#000000' })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.x', latex: letters[2 * i + 52] + '=' + (20 * (i - 2) - 9.88).toString(), sliderBounds: { min: '-13.88', max: '14.12', step: '4' } })
+                        calculator.setExpression({ hidden: false, id: 'bN' + (i - 1).toString() + '.y', latex: letters[2 * i + 53] + '=13.5', sliderBounds: { min: '-14.5', max: '13.5', step: '4' } })
+                    }
+                    // White queen
+                    makeQueen('w', 1, 4, 1);
+                    // Black queen
+                    makeQueen('b', 1, 4, 8);
+                    document.getElementById('thinking').innerHTML = '';
+                    document.getElementById('status').innerHTML = '';
+                    document.getElementById('moves_log').innerHTML = 'Moves: ';
+                    document.getElementById('game_over').style.display = 'none';
+                })
+            })
         }
         initGame();
 
-        calculator.updateSettings({expressionsCollapsed: true, showXAxis: false, showYAxis: false, showGrid: false})
+        calculator.updateSettings({ expressionsCollapsed: true, showXAxis: false, showYAxis: false, showGrid: false })
 
-        document.getElementById('calculator').addEventListener('mousedown', function () {getPieces()})
-        document.getElementById('calculator').addEventListener('mouseup', function () {getPieces(points)})
+        document.getElementById('calculator').addEventListener('mousedown', function () { getPieces() })
+        document.getElementById('calculator').addEventListener('mouseup', function () { getPieces(points) })
     </script>
 </body>
+
 </html>
