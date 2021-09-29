@@ -150,7 +150,8 @@
                 awSnap(oldPoint, newPoint, pieceId)
             }
 
-            document.getElementById('moves_log').innerHTML = 'Moves: ' + chess.history().join(', ');
+            // document.getElementById('moves_log').innerHTML = 'Moves: ' + chess.history().join(', ');
+            document.getElementById('moves_log').innerHTML = 'Moves: ' + chess.pgn();
             if (chess.in_checkmate()) {
                 let color = chess.turn();
                 for (i in expressions) {
