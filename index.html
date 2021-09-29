@@ -21,7 +21,7 @@
                 youtu.be/dQw4w9WgXcQ
             </div>
         </div>
-        <div style="width: 300px; margin-left: 8px; flex-shrink: 0">
+        <div style="width: 300px; margin-left: 8px">
             <h1>Desmos Chess</h1>
             <hr>
             <label>
@@ -226,7 +226,7 @@
                 var adjustments = [4 * (getXYFromCoord(blackMove[1].toLowerCase())[0] - getXYFromCoord(blackMove[0].toLowerCase())[0]), 4 * (getXYFromCoord(blackMove[1].toLowerCase())[1] - getXYFromCoord(blackMove[0].toLowerCase())[1])];
                 setTimeout(function () {
                     for (i in expressions) {
-                        if (expressions[i]['id'].endsWith('.x')) {
+                        if (expressions[i]['hidden'] == false && expressions[i]['id'].endsWith('.x')) {
                             currentX = expressions[i]['latex'].split('=');
                             currentY = expressions[Number(i)+1]['latex'].split('=');
                             varX = currentX[0];
@@ -234,7 +234,7 @@
                             currentX = Number(currentX[1]);
                             currentY = Number(currentY[1]);
                             if (getCoordFromXY(Number(currentX), Number(currentY)) == blackMove[0].toLowerCase()) {
-                                var pieceIndex = expressions[i]['id'][2]
+                                var pieceIndex = expressions[i]['id'][2];
                                 calculator.setExpression({id: expressions[i]['id'], latex: varX + '=' + (currentX+adjustments[0]).toString()});
                                 calculator.setExpression({id: expressions[Number(i)+1]['id'], latex: varY + '=' + (currentY+adjustments[1]).toString()});
                                 movePiece(blackMove[0].toLowerCase(), blackMove[1].toLowerCase(), 'b' + chess.get(blackMove[0].toLowerCase())['type'].toUpperCase() + pieceIndex);
