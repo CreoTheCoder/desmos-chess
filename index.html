@@ -80,6 +80,11 @@
         function resetGame() {
             chess.reset();
             initGame();
+            for (i in expressions) {
+                if (expressions[i]['id'][1] == 'Q' && expressions[i]['id'][2] != '1') {
+                    calculator.setExpression({id: expressions[i]['id'], hidden: true})
+                }
+            }
         }
         function downloadGame() {
             let text = chess.pgn({ max_width: 5, newline_char: '\n' })
