@@ -729,7 +729,7 @@
         }
         initGame();
 
-        calculator.updateSettings({ expressionsCollapsed: true, showXAxis: false, showYAxis: false, showGrid: false })
+        calculator.updateSettings({ expressionsCollapsed: true, showXAxis: false, showYAxis: false, showGrid: false, lockViewport: true })
 
         document.getElementById('calculator').addEventListener('mousedown', function () { getPieces() })
         document.getElementById('calculator').addEventListener('mouseup', function () { getPieces(points) })
